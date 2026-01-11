@@ -5,10 +5,11 @@ import utc from 'dayjs/plugin/utc'
 dayjs.extend(utc)
 
 /**
- * 格式化日期为 ISO 格式
+ * 格式化日期为 Unix 时间戳字符串 (秒)
+ * 使用时间戳避免时区转换问题
  */
 function formatDateForApi(date: Date): string {
-  return date.toISOString()
+  return Math.floor(date.getTime() / 1000).toString()
 }
 
 /**
