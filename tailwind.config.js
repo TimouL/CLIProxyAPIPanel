@@ -68,11 +68,6 @@ export default {
         kraft: "var(--kraft)",
         manilla: "var(--manilla)",
       },
-      fontFamily: {
-        sans: ["var(--sans-serif)", "system-ui", "-apple-system", "BlinkMacSystemFont", "PingFang SC", "sans-serif"],
-        serif: ["var(--serif)", "Songti SC", "STSong", "serif"],
-        mono: ["var(--monospace)", "SFMono-Regular", "Menlo", "Monaco", "monospace"],
-      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

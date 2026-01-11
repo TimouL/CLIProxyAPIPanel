@@ -1,10 +1,6 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="仪表盘"
-      description="CLI Proxy API 服务器状态和资源概览"
-    />
-
+    <!-- 直接显示内容，去掉页面标题 -->
     <div class="space-y-6">
       <!-- 统计卡片区域 -->
       <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">

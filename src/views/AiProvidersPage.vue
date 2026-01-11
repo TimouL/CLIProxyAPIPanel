@@ -1,16 +1,6 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="AI 提供商"
-      description="配置 AI 提供商 API 密钥、模型映射及其他高级设置"
-    >
-      <template #actions>
-        <Button variant="outline" size="sm" @click="refreshAll" :disabled="loading">
-          <RefreshCw :class="['w-4 h-4 mr-2', loading && 'animate-spin']" />
-          刷新
-        </Button>
-      </template>
-    </PageHeader>
+
 
     <div v-if="loading && !statsLoaded" class="space-y-6">
       <div class="flex items-center space-x-4 mb-8">
@@ -19,7 +9,7 @@
         <Skeleton class="h-10 w-24" />
         <Skeleton class="h-10 w-24" />
       </div>
-      <CardSection v-for="i in 2" :key="'skeleton-' + i" class="p-6">
+      <CardSection v-for="i in 2" :key="'skeleton-' + i">
         <div class="space-y-4">
           <Skeleton class="h-8 w-1/3" />
           <Skeleton class="h-24 w-full" />
@@ -422,7 +412,7 @@
               </Button>
             </div>
 
-            <div class="provider-card p-6">
+            <div class="provider-card">
               <div class="grid gap-6">
                 <div class="grid sm:grid-cols-2 gap-4">
                   <div class="space-y-1">
@@ -735,7 +725,7 @@ import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
 import {
   Sparkles, Bot, Code, Cpu, Boxes, Plus, Pencil, Trash2, 
-  RefreshCw, Loader2, ArrowRight, X, Activity, Search
+  Loader2, ArrowRight, X, Activity, Search
 } from 'lucide-vue-next'
 import { 
   Dialog, Sheet,
@@ -807,7 +797,7 @@ const statsLoaded = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const discovering = ref(false)
-const activeTab = ref('gemini')
+const activeTab = ref('openai')
 
 const geminiKeys = ref<any[]>([])
 const claudeConfigs = ref<any[]>([])
@@ -882,10 +872,10 @@ const selectedDiscoveryCount = computed(() => {
 
 // -- Computed --
 const tabs = computed(() => [
+  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: openaiConfigs.value.length },
   { value: 'gemini', label: 'Gemini', icon: Sparkles, count: geminiKeys.value.length },
   { value: 'claude', label: 'Claude', icon: Bot, count: claudeConfigs.value.length },
   { value: 'codex', label: 'Codex', icon: Code, count: codexConfigs.value.length },
-  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: openaiConfigs.value.length },
   { value: 'vertex', label: 'Vertex', icon: Boxes, count: vertexConfigs.value.length },
   { value: 'ampcode', label: 'Ampcode', icon: Activity }
 ])
@@ -1031,10 +1021,6 @@ const getStatusBarData = (key: string) => {
          new Array(20).fill('idle')
 }
 
-const refreshAll = () => {
-  fetchData()
-  toast({ title: '已刷新' })
-}
 
 // Helpers - field accessors for backend compatibility (kebab-case vs camelCase)
 const getApiKey = (config: any) => config['api-key'] || config.apiKey || ''

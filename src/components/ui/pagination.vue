@@ -5,25 +5,18 @@
       <span class="font-medium">
         显示 <span class="text-foreground font-semibold">{{ recordRange.start }}-{{ recordRange.end }}</span> 条，共 <span class="text-foreground font-semibold">{{ total }}</span> 条
       </span>
-      <Select
+      <SearchableSelect
         v-if="showPageSizeSelector"
-        v-model:open="pageSizeSelectOpen"
         :model-value="String(pageSize)"
+        :options="pageSizeOptions.map(size => ({ 
+          value: String(size), 
+          label: `${size} 条/页` 
+        }))"
+        placeholder="选择每页数量"
+        :searchable="false"
+        class="w-36 h-9"
         @update:model-value="handlePageSizeChange"
-      >
-        <SelectTrigger class="w-36 h-9 border-border/60">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            v-for="size in pageSizeOptions"
-            :key="size"
-            :value="String(size)"
-          >
-            {{ size }} 条/页
-          </SelectItem>
-        </SelectContent>
-      </Select>
+      />
     </div>
 
     <!-- 右侧：分页按钮 -->
@@ -92,7 +85,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Button, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
+import { Button, SearchableSelect } from '@/components/ui'
 
 interface Props {
   current: number

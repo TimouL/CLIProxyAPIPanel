@@ -128,7 +128,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function autoConnect(): Promise<boolean> {
     const stored = loadStoredAuth()
     if (stored) {
-      return connect(stored)
+      try {
+        return await connect(stored)
+      } catch (error) {
+        // 自动连接失败时清除存储的凭证
+        clearAuth()
+        return false
+      }
     }
     return false
   }

@@ -74,12 +74,26 @@
       <!-- Request/Response Body (Optional - if available) -->
       <div v-if="details?.request_body" class="space-y-2">
         <div class="text-xs text-muted-foreground uppercase tracking-wider">请求体</div>
-        <pre class="bg-muted/50 p-3 rounded-lg text-xs font-mono overflow-x-auto border border-border/50 max-h-60 overflow-y-auto">{{ formatJSON(details.request_body) }}</pre>
+        <div class="bg-muted/50 rounded-lg border border-border/50 max-h-60 overflow-y-auto">
+          <ContentFormatter
+            :data="details.request_body"
+            :expand-depth="2"
+            :is-dark="false"
+            empty-message="无请求体数据"
+          />
+        </div>
       </div>
 
       <div v-if="details?.response_body" class="space-y-2">
         <div class="text-xs text-muted-foreground uppercase tracking-wider">响应体</div>
-        <pre class="bg-muted/50 p-3 rounded-lg text-xs font-mono overflow-x-auto border border-border/50 max-h-60 overflow-y-auto">{{ formatJSON(details.response_body) }}</pre>
+        <div class="bg-muted/50 rounded-lg border border-border/50 max-h-60 overflow-y-auto">
+          <ContentFormatter
+            :data="details.response_body"
+            :expand-depth="2"
+            :is-dark="false"
+            empty-message="无响应体数据"
+          />
+        </div>
       </div>
     </div>
 
@@ -92,6 +106,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Drawer } from '@/components/ui'
+import { ContentFormatter } from '@/components/analytics'
 import { Loader2 } from 'lucide-vue-next'
 import { usageRecordsApi, type UsageRecord } from '@/api/usageRecords'
 import { formatDateTime } from '@/utils/format'
@@ -134,15 +149,6 @@ watch(() => props.record, async (newVal) => {
     }
   }
 })
-
-function formatJSON(str?: string) {
-  if (!str) return ''
-  try {
-    return JSON.stringify(JSON.parse(str), null, 2)
-  } catch {
-    return str
-  }
-}
 
 function formatTimestamp(timestamp: string): string {
   return formatDateTime(timestamp) || '未知时间'

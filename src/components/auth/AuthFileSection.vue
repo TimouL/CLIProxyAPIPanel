@@ -14,7 +14,8 @@
           <Button
             variant="secondary"
             size="sm"
-            :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90': viewMode === 'paged' }"
+            :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md': viewMode === 'paged', 'hover:bg-primary/10 hover:text-primary hover:scale-105': viewMode !== 'paged' }"
+            class="transition-all duration-200"
             @click="viewMode = 'paged'"
           >
             分页
@@ -22,7 +23,8 @@
           <Button
             variant="secondary"
             size="sm"
-            :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90': viewMode === 'all' }"
+            :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md': viewMode === 'all', 'hover:bg-primary/10 hover:text-primary hover:scale-105': viewMode !== 'all' }"
+            class="transition-all duration-200"
             @click="viewMode = 'all'"
           >
             全部
@@ -35,6 +37,7 @@
           :disabled="refreshing"
           @click="handleRefresh"
           title="刷新配额"
+          class="hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:scale-105 transition-all duration-200"
         >
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
         </Button>

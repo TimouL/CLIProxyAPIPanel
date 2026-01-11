@@ -1,22 +1,18 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="配置"
-      description="编辑服务器配置"
-    >
-      <template #actions>
-        <div class="flex items-center gap-2">
-          <Button variant="outline" @click="resetConfig" :disabled="!hasChanges">
-            重置
-          </Button>
-          <Button @click="saveConfig" :disabled="saving || !hasChanges">
-            <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
-            <Save v-else class="w-4 h-4 mr-2" />
-            保存更改
-          </Button>
-        </div>
-      </template>
-    </PageHeader>
+    <!-- 操作按钮区域 -->
+    <div class="flex justify-end mb-4">
+      <div class="flex items-center gap-2">
+        <Button variant="outline" @click="resetConfig" :disabled="!hasChanges">
+          重置
+        </Button>
+        <Button @click="saveConfig" :disabled="saving || !hasChanges">
+          <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
+          <Save v-else class="w-4 h-4 mr-2" />
+          保存更改
+        </Button>
+      </div>
+    </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-12">
@@ -207,7 +203,6 @@ const extensions = computed(() => {
     EditorView.theme({
       '&': {
         fontSize: '14px',
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
       },
       '.cm-content': {
         padding: '16px 0',

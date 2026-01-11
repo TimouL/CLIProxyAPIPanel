@@ -1,351 +1,371 @@
 <template>
-  <PageContainer>
-    <PageHeader
-      title="使用记录"
-      description="追踪 API 调用详情和性能指标"
-    >
-      <template #actions>
-        <div class="flex items-center gap-2">
-          <Select v-model="selectedPeriod">
-            <SelectTrigger class="w-[120px]">
-              <SelectValue placeholder="时间范围" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">今天</SelectItem>
-              <SelectItem value="yesterday">昨天</SelectItem>
-              <SelectItem value="last7days">最近7天</SelectItem>
-              <SelectItem value="last30days">最近30天</SelectItem>
-              <SelectItem value="last90days">最近90天</SelectItem>
-            </SelectContent>
-          </Select>
-          <RefreshButton :loading="loading" @click="refresh" />
-        </div>
-      </template>
-    </PageHeader>
-
-    <div v-if="error" class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 p-4 rounded-lg mb-6">
-      {{ error }}
+  <div class="space-y-6 pb-8">
+    <!-- 活跃度热图 + 请求间隔时间线 -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <ActivityHeatmapCard
+        :data="activityHeatmapData"
+        title="总体活跃天数"
+        :is-loading="isLoadingHeatmap"
+        :has-error="heatmapError"
+      />
+      <IntervalTimelineCard
+        title="请求间隔时间线"
+        :hours="24"
+      />
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading && !hasData" class="flex items-center justify-center py-20">
-      <Loader2 class="w-8 h-8 animate-spin text-primary" />
+    <!-- 分析统计 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <UsageModelTable
+        :data="enhancedModelStats"
+      />
+      <UsageProviderTable
+        :data="providerStats"
+      />
     </div>
 
-    <template v-else>
-      <!-- 顶部概览卡片 -->
-      <div class="mb-6">
-        <UsageSummaryCard :data="summary" />
-      </div>
-
-      <!-- 活跃度热力图 + 请求趋势 -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <ActivityHeatmap :data="heatmap" />
-        <RequestTimeline :data="timeline" />
-      </div>
-
-      <!-- 统计表格区 -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <ModelStatsTable :data="modelStats" />
-        <ProviderStatsTable :data="providerStats" />
-      </div>
-
-      <!-- 详细记录列表 -->
-      <Section title="调用日志" description="最近的 API 请求记录详情">
-        <template #actions>
-          <div class="flex gap-2">
-            <Select v-model="filterModel" @update:model-value="handleFilterChange">
-              <SelectTrigger class="w-[150px]">
-                <SelectValue placeholder="所有模型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">所有模型</SelectItem>
-                <SelectItem v-for="m in options.models" :key="m" :value="m">{{ m }}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select v-model="filterProvider" @update:model-value="handleFilterChange">
-              <SelectTrigger class="w-[120px]">
-                <SelectValue placeholder="所有提供商" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">所有提供商</SelectItem>
-                <SelectItem v-for="p in options.providers" :key="p" :value="p">{{ p }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </template>
-
-        <CardSection class="overflow-hidden">
-          <div class="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="w-[180px]">时间</TableHead>
-                  <TableHead>模型 / 提供商</TableHead>
-                  <TableHead class="text-right">令牌数</TableHead>
-                  <TableHead class="text-right">耗时</TableHead>
-                  <TableHead class="text-center w-[100px]">状态</TableHead>
-                  <TableHead class="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow 
-                  v-for="record in records" 
-                  :key="record.id" 
-                  class="cursor-pointer hover:bg-muted/50"
-                  @click="selectedRecord = record"
-                >
-                  <TableCell class="font-mono text-xs text-muted-foreground">
-                    {{ formatTime(record.timestamp) }}
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex flex-col">
-                      <span class="font-medium text-foreground">{{ record.model }}</span>
-                      <span class="text-xs text-muted-foreground capitalize">{{ record.provider }}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell class="text-right font-mono">
-                    {{ record.total_tokens }}
-                  </TableCell>
-                  <TableCell class="text-right font-mono text-xs">
-                    {{ record.duration_ms }}ms
-                  </TableCell>
-                  <TableCell class="text-center">
-                    <Badge 
-                      :variant="record.success ? 'success' : 'destructive'"
-                      class="font-mono text-xs"
-                    >
-                      {{ record.status_code }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <ChevronRight class="w-4 h-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-                
-                <TableRow v-if="records.length === 0">
-                  <TableCell colspan="6" class="h-24 text-center text-muted-foreground">
-                    没有找到相关记录
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-
-          <div class="py-4 border-t border-border flex justify-end px-4">
-            <Pagination 
-              :total="totalRecords" 
-              :page-size="pageSize" 
-              :current="currentPage"
-              @update:current="handlePageChange"
-              @update:page-size="handlePageSizeChange"
-            />
-          </div>
-        </CardSection>
-      </Section>
-    </template>
-
-    <RecordDetailDrawer 
-      :record="selectedRecord" 
-      @close="selectedRecord = null" 
+    <!-- 请求详情 -->
+    <UsageRecordsTable
+      :records="displayRecords"
+      :loading="isLoadingRecords"
+      :selected-period="selectedPeriod"
+      :filter-search="filterSearch"
+      :filter-model="filterModel"
+      :filter-provider="filterProvider"
+      :filter-status="filterStatus"
+      :available-models="availableModels"
+      :available-providers="availableProviders"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      :total-records="totalRecords"
+      :page-size-options="pageSizeOptions"
+      :auto-refresh="autoRefresh"
+      @update:selected-period="handlePeriodChange"
+      @update:filter-search="handleFilterSearchChange"
+      @update:filter-model="handleFilterModelChange"
+      @update:filter-provider="handleFilterProviderChange"
+      @update:filter-status="handleFilterStatusChange"
+      @update:current-page="handlePageChange"
+      @update:page-size="handlePageSizeChange"
+      @update:auto-refresh="handleAutoRefreshChange"
+      @refresh="refreshData"
+      @show-detail="showRequestDetail"
     />
-  </PageContainer>
+
+    <!-- 请求详情抽屉 -->
+    <RecordDetailDrawer
+      :record="selectedRecord"
+      :request-trace="selectedRequestTrace"
+      :loading="isLoadingDetail"
+      @close="closeDetailDrawer"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronRight, Loader2 } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useToast } from '@/composables/useToast'
-import PageContainer from '@/components/layout/PageContainer.vue'
-import PageHeader from '@/components/layout/PageHeader.vue'
-import Section from '@/components/layout/Section.vue'
-import CardSection from '@/components/layout/CardSection.vue'
-import RefreshButton from '@/components/ui/refresh-button.vue'
-import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import Pagination from '@/components/ui/pagination.vue'
-
-import {
-  UsageSummaryCard,
-  ActivityHeatmap,
-  RequestTimeline,
-  ModelStatsTable,
-  ProviderStatsTable,
+  ActivityHeatmapCard,
+  IntervalTimelineCard,
+  UsageModelTable,
+  UsageProviderTable,
+  UsageRecordsTable,
   RecordDetailDrawer
 } from '@/components/analytics'
-
 import { 
   usageRecordsApi, 
   type UsageRecord, 
-  type UsageSummary, 
-  type ActivityHeatmap as ActivityHeatmapType,
-  type RequestTimeline as RequestTimelineType,
+  type ActivityHeatmap,
   type ModelStats,
   type ProviderStats,
-  type UsageRecordOptionsResult
 } from '@/api/usageRecords'
-
-import type { PeriodValue } from '@/features/usage/types'
+import type { PeriodValue, FilterStatusValue } from '@/features/usage/types'
 import { getDateRangeFromPeriod } from '@/features/usage/composables'
-import { formatShortDateTime } from '@/utils/format'
 
-const { toast } = useToast()
+const { warning } = useToast()
 
-// State
-const loading = ref(false)
-const error = ref<string | null>(null)
-const selectedPeriod = ref<PeriodValue>('last7days')
+// 时间段选择
+const selectedPeriod = ref<PeriodValue>('today')
+
+// 分页状态
 const currentPage = ref(1)
 const pageSize = ref(20)
-const totalRecords = ref(0)
+const pageSizeOptions = [10, 20, 50, 100]
 
-// Filters
-const filterModel = ref('all')
-const filterProvider = ref('all')
-const options = ref<UsageRecordOptionsResult>({ models: [], providers: [] })
+// 筛选状态
+const filterSearch = ref('')
+const filterModel = ref('__all__')
+const filterProvider = ref('__all__')
+const filterStatus = ref<FilterStatusValue>('__all__')
 
-// Data
-const summary = ref<UsageSummary>({
-  total_requests: 0,
-  success_requests: 0,
-  failure_requests: 0,
-  success_rate: 0,
-  total_tokens: 0,
-  input_tokens: 0,
-  output_tokens: 0,
-  avg_duration_ms: 0,
-  unique_models: 0,
-  unique_providers: 0
-})
-const heatmap = ref<ActivityHeatmapType | null>(null)
-const timeline = ref<RequestTimelineType | null>(null)
+// 自动刷新状态
+const autoRefresh = ref(false)
+let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
+const AUTO_REFRESH_INTERVAL = 10000 // 10秒刷新一次
+
+// 数据状态
+const isLoadingRecords = ref(false)
+const isLoadingHeatmap = ref(false)
+const heatmapError = ref(false)
+const activityHeatmapData = ref<ActivityHeatmap | null>(null)
 const modelStats = ref<ModelStats[]>([])
 const providerStats = ref<ProviderStats[]>([])
-const records = ref<UsageRecord[]>([])
-const selectedRecord = ref<UsageRecord | null>(null)
+const currentRecords = ref<UsageRecord[]>([])
+const totalRecords = ref(0)
+const availableModels = ref<string[]>([])
+const availableProviders = ref<string[]>([])
 
-const hasData = computed(() => {
-  return summary.value.total_requests > 0 || records.value.length > 0
+// 详情弹窗状态
+const selectedRecord = ref<UsageRecord | null>(null)
+const selectedRequestTrace = ref<any[]>([])
+const isLoadingDetail = ref(false)
+
+// 增强的模型统计（添加效率分析）
+const enhancedModelStats = computed(() => {
+  return modelStats.value.map(model => {
+    const costPerToken = model.total_tokens > 0 
+      ? (model.total_tokens / 1000000).toFixed(4)
+      : '0.0000'
+    return {
+      ...model,
+      costPerToken: `${costPerToken}/M`
+    }
+  })
 })
 
-// Helper functions
-function formatTime(timestamp: string): string {
-  return formatShortDateTime(timestamp) || timestamp
-}
+// 前端筛选
+const filteredRecords = computed(() => {
+  let records = [...currentRecords.value]
 
-function getTimeRange(): { startTime: string; endTime: string } {
-  const range = getDateRangeFromPeriod(selectedPeriod.value)
-  return { 
-    startTime: range.start_time || '', 
-    endTime: range.end_time || '' 
+  if (filterModel.value !== '__all__') {
+    records = records.filter(record => record.model === filterModel.value)
+  }
+
+  if (filterProvider.value !== '__all__') {
+    records = records.filter(record => record.provider === filterProvider.value)
+  }
+
+  if (filterStatus.value !== '__all__') {
+    if (filterStatus.value === 'error') {
+      records = records.filter(record => !record.success)
+    } else if (filterStatus.value === 'success') {
+      records = records.filter(record => record.success)
+    }
+  }
+
+  return records
+})
+
+// 前端分页
+const paginatedRecords = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredRecords.value.slice(start, end)
+})
+
+// 显示的记录
+const displayRecords = computed(() => paginatedRecords.value)
+
+// 加载热力图数据
+async function loadHeatmapData() {
+  isLoadingHeatmap.value = true
+  heatmapError.value = false
+  try {
+    activityHeatmapData.value = await usageRecordsApi.getHeatmap(365)
+  } catch (error) {
+    console.error('加载热力图数据失败:', error)
+    heatmapError.value = true
+  } finally {
+    isLoadingHeatmap.value = false
   }
 }
 
-// Actions
-async function fetchAllData() {
-  loading.value = true
-  error.value = null
-  
+// 加载统计数据
+async function loadStats(dateRange: { start_time?: string; end_time?: string }) {
   try {
-    const { startTime, endTime } = getTimeRange()
-    
-    // Parallel fetch for dashboard widgets
-    const [
-      summaryData, 
-      heatmapData, 
-      timelineData, 
-      modelData, 
-      providerData,
-      optionsData
-    ] = await Promise.all([
-      usageRecordsApi.getSummary(startTime, endTime),
-      usageRecordsApi.getHeatmap(90),
-      usageRecordsApi.getTimeline(startTime, endTime),
-      usageRecordsApi.getModelStats(startTime, endTime),
-      usageRecordsApi.getProviderStats(startTime, endTime),
-      usageRecordsApi.getOptions(startTime, endTime)
+    const [modelData, providerData, optionsData] = await Promise.all([
+      usageRecordsApi.getModelStats(dateRange.start_time, dateRange.end_time),
+      usageRecordsApi.getProviderStats(dateRange.start_time, dateRange.end_time),
+      usageRecordsApi.getOptions(dateRange.start_time, dateRange.end_time)
     ])
 
-    summary.value = summaryData
-    heatmap.value = heatmapData
-    timeline.value = timelineData
     modelStats.value = modelData.models || []
     providerStats.value = providerData.providers || []
-    options.value = optionsData
-
-    // Fetch table data separately
-    await fetchRecords()
-    
-  } catch (err) {
-    console.error(err)
-    error.value = '加载数据失败，请检查网络连接或稍后重试'
-    toast({ title: '加载失败', variant: 'destructive', description: '无法获取最新使用记录' })
-  } finally {
-    loading.value = false
+    availableModels.value = optionsData.models || []
+    availableProviders.value = optionsData.providers || []
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+    warning('统计数据加载失败，请刷新重试')
   }
 }
 
-async function fetchRecords() {
-  const { startTime, endTime } = getTimeRange()
-  
+// 加载记录
+async function loadRecords(pagination: { page: number; pageSize: number }, filters: Record<string, any>) {
+  isLoadingRecords.value = true
   try {
-    const res = await usageRecordsApi.list({
-      page: currentPage.value,
-      page_size: pageSize.value,
-      start_time: startTime,
-      end_time: endTime,
-      model: filterModel.value === 'all' ? undefined : filterModel.value,
-      provider: filterProvider.value === 'all' ? undefined : filterProvider.value
+    const dateRange = getDateRangeFromPeriod(selectedPeriod.value)
+    const result = await usageRecordsApi.list({
+      page: pagination.page,
+      page_size: pagination.pageSize,
+      start_time: dateRange.start_time,
+      end_time: dateRange.end_time,
+      ...filters
     })
-    
-    records.value = res.records || []
-    totalRecords.value = res.total || 0
-  } catch (err) {
-    console.error('Failed to fetch records list', err)
+
+    currentRecords.value = result.records || []
+    totalRecords.value = result.total || 0
+  } catch (error) {
+    console.error('加载记录失败:', error)
+  } finally {
+    isLoadingRecords.value = false
   }
 }
 
-function handleFilterChange() {
+// 获取当前筛选参数
+function getCurrentFilters() {
+  return {
+    search: filterSearch.value.trim() || undefined,
+    model: filterModel.value !== '__all__' ? filterModel.value : undefined,
+    provider: filterProvider.value !== '__all__' ? filterProvider.value : undefined,
+  }
+}
+
+// 处理时间段变化
+async function handlePeriodChange(value: string) {
+  selectedPeriod.value = value as PeriodValue
   currentPage.value = 1
-  fetchRecords()
+
+  const dateRange = getDateRangeFromPeriod(selectedPeriod.value)
+  await loadStats(dateRange)
+  await loadRecords({ page: 1, pageSize: pageSize.value }, getCurrentFilters())
 }
 
-function handlePageChange(page: number) {
+// 处理分页变化
+async function handlePageChange(page: number) {
   currentPage.value = page
-  fetchRecords()
+  await loadRecords({ page, pageSize: pageSize.value }, getCurrentFilters())
 }
 
-function handlePageSizeChange(size: number) {
+// 处理每页大小变化
+async function handlePageSizeChange(size: number) {
   pageSize.value = size
   currentPage.value = 1
-  fetchRecords()
+  await loadRecords({ page: 1, pageSize: size }, getCurrentFilters())
 }
 
-async function refresh() {
-  await fetchAllData()
-}
-
-// Watchers
-watch(selectedPeriod, () => {
+// 处理筛选变化
+async function handleFilterSearchChange(value: string) {
+  filterSearch.value = value
   currentPage.value = 1
-  fetchAllData()
+  await loadRecords({ page: 1, pageSize: pageSize.value }, getCurrentFilters())
+}
+
+async function handleFilterModelChange(value: string) {
+  filterModel.value = value
+  currentPage.value = 1
+}
+
+async function handleFilterProviderChange(value: string) {
+  filterProvider.value = value
+  currentPage.value = 1
+}
+
+async function handleFilterStatusChange(value: string) {
+  filterStatus.value = value as FilterStatusValue
+  currentPage.value = 1
+}
+
+// 刷新数据
+async function refreshData() {
+  const dateRange = getDateRangeFromPeriod(selectedPeriod.value)
+  await loadStats(dateRange)
+  await loadRecords({ page: currentPage.value, pageSize: pageSize.value }, getCurrentFilters())
+}
+
+// 显示请求详情
+async function showRequestDetail(id: string) {
+  isLoadingDetail.value = true
+  try {
+    // 获取详细记录
+    const record = await usageRecordsApi.getById(parseInt(id))
+    selectedRecord.value = record
+    
+    // 获取请求链路追踪数据
+    try {
+      const candidatesResult = await usageRecordsApi.getRequestCandidates(parseInt(id))
+      selectedRequestTrace.value = candidatesResult.candidates.map(candidate => ({
+        provider: candidate.provider,
+        api_key_masked: candidate.api_key_masked,
+        status_code: candidate.status_code,
+        success: candidate.success,
+        duration_ms: candidate.duration_ms,
+        error_message: candidate.error_message
+      }))
+    } catch (error) {
+      console.warn('获取请求链路追踪失败:', error)
+      selectedRequestTrace.value = []
+    }
+  } catch (error) {
+    console.error('加载请求详情失败:', error)
+    warning('加载请求详情失败，请重试')
+  } finally {
+    isLoadingDetail.value = false
+  }
+}
+
+// 关闭详情抽屉
+function closeDetailDrawer() {
+  selectedRecord.value = null
+  selectedRequestTrace.value = []
+}
+
+// 自动刷新功能
+function startAutoRefresh() {
+  if (autoRefreshTimer) return
+  autoRefreshTimer = setInterval(() => {
+    refreshData()
+  }, AUTO_REFRESH_INTERVAL)
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
+    autoRefreshTimer = null
+  }
+}
+
+function handleAutoRefreshChange(value: boolean) {
+  autoRefresh.value = value
+  if (value) {
+    refreshData() // 立即刷新一次
+    startAutoRefresh()
+  } else {
+    stopAutoRefresh()
+  }
+}
+
+// 初始化加载
+onMounted(async () => {
+  const dateRange = getDateRangeFromPeriod(selectedPeriod.value)
+
+  // 并行加载统计数据和热力图
+  try {
+    await Promise.all([
+      loadStats(dateRange),
+      loadHeatmapData()
+    ])
+  } catch (error) {
+    console.error('加载数据失败:', error)
+    warning('数据加载失败，请刷新重试')
+  }
+
+  // 加载记录
+  await loadRecords({ page: currentPage.value, pageSize: pageSize.value }, getCurrentFilters())
 })
 
-// Init
-onMounted(fetchAllData)
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  stopAutoRefresh()
+})
 </script>

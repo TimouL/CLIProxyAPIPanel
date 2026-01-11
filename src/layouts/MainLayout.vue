@@ -255,36 +255,12 @@
         </Transition>
       </header>
 
-      <!-- Desktop Page Header -->
-      <header class="hidden lg:flex h-16 px-8 items-center justify-between shrink-0 border-b border-[#3d3929]/5 dark:border-white/5 sticky top-0 z-40 backdrop-blur-md bg-[#faf9f5]/90 dark:bg-[#191714]/90">
-        <div class="flex flex-col gap-0.5">
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{{ currentSectionName }}</span>
-            <ChevronRight class="w-3 h-3 opacity-50" />
-            <span class="text-foreground font-medium">{{ currentPageName }}</span>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <!-- Theme Toggle -->
-          <button
-            class="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition"
-            :title="themeMode === 'system' ? '跟随系统' : themeMode === 'dark' ? '深色模式' : '浅色模式'"
-            @click="toggleDarkMode"
-          >
-            <SunMoon
-              v-if="themeMode === 'system'"
-              class="h-4 w-4"
-            />
-            <SunMedium
-              v-else-if="themeMode === 'light'"
-              class="h-4 w-4"
-            />
-            <Moon
-              v-else
-              class="h-4 w-4"
-            />
-          </button>
+      <!-- Desktop Page Header - 只显示面包屑导航 -->
+      <header class="hidden lg:flex h-12 px-6 items-center shrink-0 border-b border-[#3d3929]/5 dark:border-white/5 sticky top-0 z-40 backdrop-blur-md bg-[#faf9f5]/90 dark:bg-[#191714]/90">
+        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{{ currentSectionName }}</span>
+          <ChevronRight class="w-3 h-3 opacity-50" />
+          <span class="text-foreground font-medium">{{ currentPageName }}</span>
         </div>
       </header>
     </template>
@@ -308,7 +284,6 @@ import {
   FileText,
   Fingerprint,
   BarChart3,
-
   ScrollText,
   FileCode,
   Archive,
@@ -431,7 +406,7 @@ const contentClasses = computed(() => {
 })
 
 const mainClasses = computed(() => {
-  return `pt-24 lg:pt-6`
+  return `pt-24 lg:pt-12` // 为面包屑留出空间
 })
 </script>
 

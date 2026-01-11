@@ -3,3 +3,6 @@
  */
 
 export { apiClient } from './client'
+
+// Usage Records API
+export * from './usageRecords'

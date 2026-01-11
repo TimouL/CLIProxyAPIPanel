@@ -33,7 +33,8 @@ watch(
     if (isModelControlled.value) {
       internalValue.value = value
     }
-  }
+  },
+  { immediate: true }
 )
 
 const modelValueState = computed({
@@ -61,11 +62,12 @@ watch(
     if (isOpenControlled.value && value !== undefined) {
       internalOpen.value = value
     }
-  }
+  },
+  { immediate: true }
 )
 
 const openState = computed({
-  get: () => (isOpenControlled.value ? props.open : internalOpen.value),
+  get: () => (isOpenControlled.value ? props.open ?? false : internalOpen.value),
   set: (value: boolean) => {
     if (!isOpenControlled.value) {
       internalOpen.value = value

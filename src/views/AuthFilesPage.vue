@@ -1,42 +1,42 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="认证文件"
-      description="管理服务认证凭证与配额状态"
-    >
-      <template #actions>
-        <div class="flex items-center gap-2">
-          <div class="relative hidden sm:block">
-            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="搜索文件..."
-              class="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          <Button @click="triggerUpload">
-            <Upload class="w-4 h-4 mr-2" />
-            上传文件
-          </Button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json"
-            class="hidden"
-            @change="handleFileUpload"
-          />
-        </div>
-      </template>
-    </PageHeader>
+    <!-- 操作区域 -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+      <div class="relative">
+        <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="搜索文件..."
+          class="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <Button v-if="loadedQuotaCount > 0" variant="outline" @click="clearAllQuotaStates" class="hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-900/20 hover:scale-105 transition-all duration-200">
+          <Trash2 class="w-4 h-4 mr-2" />
+          清除配额 ({{ loadedQuotaCount }})
+        </Button>
+        <Button @click="triggerUpload" class="hover:scale-105 transition-all duration-200">
+          <Upload class="w-4 h-4 mr-2" />
+          上传文件
+        </Button>
+      </div>
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".json"
+        class="hidden"
+        @change="handleFileUpload"
+      />
+    </div>
 
     <!-- Filter Tags -->
     <div class="mb-6 flex flex-wrap gap-2">
       <button
-        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:scale-105"
         :class="currentFilter === 'all' 
-          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' 
-          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80'"
+          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 shadow-md' 
+          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30'"
         @click="currentFilter = 'all'"
       >
         全部
@@ -44,10 +44,10 @@
       <button
         v-for="type in availableTypes"
         :key="type"
-        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 capitalize"
+        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 capitalize hover:scale-105"
         :class="currentFilter === type 
-          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' 
-          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80'"
+          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80 shadow-md' 
+          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30'"
         @click="currentFilter = type"
       >
         {{ type }}
@@ -163,7 +163,7 @@
       <div class="bg-card rounded-xl border shadow-lg p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold">支持的模型 - {{ modelsFileName }}</h3>
-          <Button variant="ghost" size="icon" @click="modelsModalOpen = false">
+          <Button variant="ghost" size="icon" @click="modelsModalOpen = false" class="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 hover:scale-110 transition-all duration-200">
             <X class="h-4 w-4" />
           </Button>
         </div>
@@ -207,7 +207,7 @@
       <div class="bg-card rounded-xl border shadow-lg p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
         <div class="flex items-center justify-between mb-4 shrink-0">
           <h3 class="text-lg font-semibold truncate">{{ selectedFileInfo?.name || '凭证信息' }}</h3>
-          <Button variant="ghost" size="icon" @click="infoModalOpen = false">
+          <Button variant="ghost" size="icon" @click="infoModalOpen = false" class="hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 hover:scale-110 transition-all duration-200">
             <X class="h-4 w-4" />
           </Button>
         </div>
@@ -215,10 +215,10 @@
           <pre class="bg-secondary/30 rounded-lg p-4 text-sm font-mono whitespace-pre-wrap break-all overflow-x-auto">{{ JSON.stringify(selectedFileInfo, null, 2) }}</pre>
         </div>
         <div class="flex justify-end gap-2 mt-4 pt-4 border-t shrink-0">
-          <Button variant="outline" @click="infoModalOpen = false">
+          <Button variant="outline" @click="infoModalOpen = false" class="hover:scale-105 transition-all duration-200">
             关闭
           </Button>
-          <Button @click="copyFileInfo">
+          <Button @click="copyFileInfo" class="hover:scale-105 transition-all duration-200">
             复制
           </Button>
         </div>
@@ -232,6 +232,7 @@ import { ref, computed, onMounted, provide } from 'vue'
 import { apiClient } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useClipboard } from '@/composables/useClipboard'
+import { useQuotaStore } from '@/stores/quota'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
@@ -243,12 +244,14 @@ import {
   Upload,
   Search,
   X,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-vue-next'
 import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
 
 const { toast } = useToast()
 const { copy } = useClipboard()
+const quotaStore = useQuotaStore()
 
 const loading = ref(true)
 const files = ref<AuthFileItem[]>([])
@@ -281,6 +284,17 @@ async function handleSectionRefresh(filesToRefresh: AuthFileItem[]) {
     refreshTrigger.value = new Set()
   }, 100)
 }
+
+// Clear all quota states
+const clearAllQuotaStates = () => {
+  if (confirm('确定要清除所有配额信息吗？这将重置所有已加载的配额状态。')) {
+    quotaStore.clearAllStates()
+    toast({ title: '已清除所有配额信息' })
+  }
+}
+
+// Get loaded quota count for display
+const loadedQuotaCount = computed(() => quotaStore.getLoadedQuotaCount())
 
 // Available types for filter
 const availableTypes = computed(() => {

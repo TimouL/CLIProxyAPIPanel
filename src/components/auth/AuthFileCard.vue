@@ -7,8 +7,8 @@
     ]"
   >
     <!-- Header -->
-    <div class="flex items-start justify-between mb-4">
-      <div class="flex items-center gap-3 overflow-hidden">
+    <div>
+      <div class="flex items-start gap-3">
         <!-- Type Badge -->
         <div
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-sm"
@@ -17,38 +17,43 @@
           <component :is="getIconForType(file.type)" class="h-5 w-5" />
         </div>
         
-        <!-- File Info -->
+        <!-- File Info - Two Rows -->
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
+          <!-- First Row: File Name -->
+          <div class="flex items-center gap-2 mb-1">
             <h3 class="font-semibold text-foreground truncate" :title="file.name">
               {{ file.name }}
             </h3>
-            <span v-if="file.disabled" class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+            <span v-if="file.disabled" class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 shrink-0">
               已禁用
             </span>
           </div>
-          <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-            <span>{{ formatFileSize(file.size) }}</span>
-            <span class="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
-            <span>{{ formatDate(file.modified) }}</span>
+          
+          <!-- Second Row: Size, Date and Action Buttons -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{{ formatFileSize(file.size) }}</span>
+              <span class="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
+              <span>{{ formatDate(file.modified) }}</span>
+            </div>
+            
+            <!-- Actions Buttons -->
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+              <Button v-if="showQuota" variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:scale-110 transition-all duration-200" aria-label="支持模型" title="支持模型" @click="$emit('show-models')">
+                <Bot class="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:scale-110 transition-all duration-200" aria-label="凭证信息" title="凭证信息" @click="$emit('show-info')">
+                <Info class="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:scale-110 transition-all duration-200" aria-label="下载" @click="$emit('download', file.name)">
+                <Download class="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-110 transition-all duration-200" aria-label="删除" @click="$emit('delete', file.name)">
+                <Trash2 class="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Actions Dropdown -->
-      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button v-if="showQuota" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="支持模型" title="支持模型" @click="$emit('show-models')">
-          <Bot class="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="凭证信息" title="凭证信息" @click="$emit('show-info')">
-          <Info class="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="下载" @click="$emit('download', file.name)">
-          <Download class="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="删除" @click="$emit('delete', file.name)">
-          <Trash2 class="h-4 w-4" />
-        </Button>
       </div>
     </div>
 
@@ -79,7 +84,7 @@
         <Button 
           variant="ghost" 
           size="sm" 
-          class="h-6 px-2 text-[10px] gap-1 hover:bg-transparent hover:text-primary p-0"
+          class="h-6 px-2 text-[10px] gap-1 hover:bg-primary/10 hover:text-primary hover:scale-105 transition-all duration-200 p-0"
           :disabled="loading"
           aria-label="刷新配额"
           @click="loadQuota"
@@ -96,66 +101,65 @@
 
       <!-- Antigravity Quota -->
       <div v-else-if="file.type === 'antigravity' && quotaState?.status === 'success'" class="space-y-3">
-        <div v-for="group in (quotaState as AntigravityQuotaState).groups" :key="group.id">
+        <div v-for="group in quotaState.groups" :key="group.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ group.label }}</span>
-             <span class="font-mono">{{ (group.remainingFraction * 100).toFixed(0) }}%</span>
+             <div class="flex items-center gap-2">
+               <span class="font-mono">{{ (group.remainingFraction * 100).toFixed(0) }}%</span>
+               <span v-if="group.resetTime" class="text-[10px] text-muted-foreground">{{ formatQuotaResetTime(group.resetTime) }}</span>
+             </div>
            </div>
-           <div class="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+           <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
              <div 
                class="h-full transition-all duration-500 rounded-full"
                :class="getProgressColor(group.remainingFraction)"
                :style="{ width: `${group.remainingFraction * 100}%` }"
              ></div>
            </div>
-           <div class="text-[10px] text-muted-foreground mt-0.5 text-right" v-if="group.resetTime">
-             重置于: {{ formatQuotaResetTime(group.resetTime) }}
-           </div>
         </div>
-        <div v-if="(quotaState as AntigravityQuotaState).groups.length === 0" class="text-xs text-muted-foreground text-center py-2">
+        <div v-if="quotaState.groups.length === 0" class="text-xs text-muted-foreground text-center py-2">
           暂无配额信息
         </div>
       </div>
 
       <!-- Codex Quota -->
       <div v-else-if="file.type === 'codex' && quotaState?.status === 'success'" class="space-y-3">
-        <div v-for="win in (quotaState as CodexQuotaState).windows" :key="win.id">
+        <div v-for="win in quotaState.windows" :key="win.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ win.label }}</span>
-             <span class="font-mono">{{ win.usedPercent !== null ? win.usedPercent.toFixed(1) + '%' : 'N/A' }}</span>
+             <div class="flex items-center gap-2">
+               <span class="font-mono">{{ win.usedPercent !== null ? (100 - win.usedPercent).toFixed(1) + '%' : 'N/A' }}</span>
+               <span v-if="win.resetLabel" class="text-[10px] text-muted-foreground">{{ win.resetLabel }}</span>
+             </div>
            </div>
-           <div class="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-             <!-- Codex sends USED percent, so we show inverted bar or just red bar for usage -->
-             <!-- Let's show USED bar. High usage = Red. -->
+           <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+             <!-- Show remaining quota (100 - used), green = full -->
              <div 
                class="h-full transition-all duration-500 rounded-full"
-               :class="getUsageColor(win.usedPercent || 0)"
-               :style="{ width: `${Math.min(win.usedPercent || 0, 100)}%` }"
+               :class="getProgressColor((100 - (win.usedPercent || 0)) / 100)"
+               :style="{ width: `${Math.max(100 - (win.usedPercent || 0), 0)}%` }"
              ></div>
-           </div>
-           <div class="text-[10px] text-muted-foreground mt-0.5 text-right" v-if="win.resetLabel">
-             重置于: {{ win.resetLabel }}
            </div>
         </div>
       </div>
 
       <!-- Gemini CLI Quota -->
       <div v-else-if="file.type === 'gemini-cli' && quotaState?.status === 'success'" class="space-y-3">
-         <div v-for="bucket in (quotaState as GeminiCliQuotaState).buckets" :key="bucket.id">
+         <div v-for="bucket in quotaState.buckets" :key="bucket.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ bucket.label }}</span>
-             <span class="font-mono">{{ bucket.remainingFraction !== null ? (bucket.remainingFraction * 100).toFixed(0) + '%' : 'N/A' }}</span>
+             <div class="flex items-center gap-2">
+               <span class="font-mono">{{ bucket.remainingFraction !== null ? (bucket.remainingFraction * 100).toFixed(0) + '%' : 'N/A' }}</span>
+               <span v-if="bucket.resetTime" class="text-[10px] text-muted-foreground">{{ formatQuotaResetTime(bucket.resetTime) }}</span>
+             </div>
            </div>
-           <div class="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+           <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
              <div 
                v-if="bucket.remainingFraction !== null"
                class="h-full transition-all duration-500 rounded-full"
                :class="getProgressColor(bucket.remainingFraction)"
                :style="{ width: `${bucket.remainingFraction * 100}%` }"
              ></div>
-           </div>
-           <div class="text-[10px] text-muted-foreground mt-0.5 text-right" v-if="bucket.resetTime">
-             重置于: {{ formatQuotaResetTime(bucket.resetTime) }}
            </div>
         </div>
       </div>
@@ -205,7 +209,7 @@ defineEmits<{
   (e: 'show-info'): void
 }>()
 
-const { quotaState, loading, loadQuota } = useQuota(props.file)
+const { quotaState, loading, loadQuota, resetQuota } = useQuota(props.file)
 
 // Subscribe to batch refresh trigger from parent
 const refreshTrigger = inject<Ref<Set<string>>>('quotaRefreshTrigger', undefined)

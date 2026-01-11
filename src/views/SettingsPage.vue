@@ -1,9 +1,6 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="设置"
-      description="连接和应用程序设置"
-    />
+    <!-- 直接显示内容，去掉页面标题 -->
 
     <!-- Connection Settings -->
     <Section title="连接设置" class="mb-8">

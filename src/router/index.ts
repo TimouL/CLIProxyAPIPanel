@@ -90,6 +90,12 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
 
+  // 如果正在加载中，允许访问任何路由（避免闪烁）
+  if (document.querySelector('.splash-screen')) {
+    next()
+    return
+  }
+
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
 
   if (requiresAuth && !authStore.isConnected) {

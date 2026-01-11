@@ -1,9 +1,6 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="OAuth 认证"
-      description="通过 OAuth 设备流程获取 AI 提供商的访问令牌"
-    />
+    <!-- 直接显示内容，去掉页面标题 -->
 
     <!-- OAuth Providers -->
     <Section title="支持的提供商" class="mb-8">

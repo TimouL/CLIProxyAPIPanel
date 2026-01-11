@@ -1,22 +1,18 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="API 密钥"
-      description="管理代理 API 密钥"
-    >
-      <template #actions>
-        <div class="flex gap-2">
-          <Button variant="outline" @click="refreshKeys" :disabled="loading">
-            <RefreshCw :class="['w-4 h-4 mr-2', loading && 'animate-spin']" />
-            刷新
-          </Button>
-          <Button @click="openAddDialog">
-            <Plus class="w-4 h-4 mr-2" />
-            添加密钥
-          </Button>
-        </div>
-      </template>
-    </PageHeader>
+    <!-- 操作按钮区域 -->
+    <div class="flex justify-end mb-4">
+      <div class="flex gap-2">
+        <Button variant="outline" @click="refreshKeys" :disabled="loading">
+          <RefreshCw :class="['w-4 h-4 mr-2', loading && 'animate-spin']" />
+          刷新
+        </Button>
+        <Button @click="openAddDialog">
+          <Plus class="w-4 h-4 mr-2" />
+          添加密钥
+        </Button>
+      </div>
+    </div>
 
     <!-- 主卡片容器 -->
     <Card variant="default" class="overflow-hidden">

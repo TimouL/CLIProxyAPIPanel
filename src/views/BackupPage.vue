@@ -1,10 +1,6 @@
 <template>
   <PageContainer>
-    <PageHeader
-      title="备份与恢复"
-      description="创建备份和恢复配置"
-    />
-
+    <!-- 直接显示内容，去掉页面标题 -->
     <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <!-- Action Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

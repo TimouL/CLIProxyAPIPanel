@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed } from 'vue'
 import type {
   AuthFileItem,
   AntigravityQuotaState,
@@ -15,6 +15,7 @@ import type {
   CodexUsageWindow,
   GeminiCliParsedBucket
 } from '@/types'
+import { useQuotaStore } from '@/stores/quota'
 import { apiCallApi, getApiCallErrorMessage } from '@/api/apiCall'
 import {
   ANTIGRAVITY_QUOTA_URLS,
@@ -235,14 +236,14 @@ function buildCodexQuotaWindows(payload: CodexUsagePayload): CodexQuotaWindow[] 
 
   addWindow(
     'primary',
-    '主要窗口',
+    '5H限制',
     rateLimit?.primary_window ?? rateLimit?.primaryWindow,
     rateLimit?.limit_reached ?? rateLimit?.limitReached,
     rateLimit?.allowed
   )
   addWindow(
     'secondary',
-    '次要窗口',
+    '周限制',
     rateLimit?.secondary_window ?? rateLimit?.secondaryWindow,
     rateLimit?.limit_reached ?? rateLimit?.limitReached,
     rateLimit?.allowed
@@ -341,29 +342,38 @@ function buildGeminiCliQuotaBuckets(buckets: GeminiCliParsedBucket[]): GeminiCli
 // =====================
 
 export function useQuota(file: AuthFileItem) {
-  const loading = ref(false)
-  const quotaState = ref<AntigravityQuotaState | CodexQuotaState | GeminiCliQuotaState | null>(null)
+  const quotaStore = useQuotaStore()
+  
+  // 使用 computed 来响应式地获取状态
+  const quotaState = computed(() => quotaStore.getQuotaState(file.name))
+  const loading = computed(() => quotaStore.getLoadingState(file.name))
 
-  // Initialize state based on type
-  if (file.type === 'antigravity') {
-    quotaState.value = { status: 'idle', groups: [] }
-  } else if (file.type === 'codex') {
-    quotaState.value = { status: 'idle', windows: [] }
-  } else if (file.type === 'gemini-cli') {
-    quotaState.value = { status: 'idle', buckets: [] }
+  // 初始化状态（如果不存在）
+  quotaStore.initializeQuotaState(file.name, file.type || '')
+
+  // Reset quota state
+  const resetQuota = () => {
+    quotaStore.initializeQuotaState(file.name, file.type || '')
+    quotaStore.setLoadingState(file.name, false)
   }
 
   const loadQuota = async () => {
     // Support both camelCase and snake_case field names
     const rawAuthIndex = file.authIndex ?? (file as Record<string, unknown>)['auth_index']
     if (!rawAuthIndex) return
-    loading.value = true
-    if (quotaState.value) quotaState.value.status = 'loading'
+    
+    quotaStore.setLoadingState(file.name, true)
+    const currentState = quotaStore.getQuotaState(file.name)
+    if (currentState) {
+      quotaStore.setQuotaState(file.name, { ...currentState, status: 'loading' })
+    }
     
     // Clear previous error
-    if (quotaState.value) {
-      quotaState.value.error = undefined
-      quotaState.value.errorStatus = undefined
+    if (currentState) {
+      const clearedState = { ...currentState }
+      delete clearedState.error
+      delete clearedState.errorStatus
+      quotaStore.setQuotaState(file.name, clearedState)
     }
 
     try {
@@ -380,12 +390,16 @@ export function useQuota(file: AuthFileItem) {
         await loadGeminiCliQuota(authIndex)
       }
     } catch (err: unknown) {
-      if (quotaState.value) {
-        quotaState.value.status = 'error'
-        quotaState.value.error = err instanceof Error ? err.message : '未知错误'
+      const currentState = quotaStore.getQuotaState(file.name)
+      if (currentState) {
+        quotaStore.setQuotaState(file.name, {
+          ...currentState,
+          status: 'error',
+          error: err instanceof Error ? err.message : '未知错误'
+        })
       }
     } finally {
-      loading.value = false
+      quotaStore.setLoadingState(file.name, false)
     }
   }
 
@@ -434,9 +448,13 @@ export function useQuota(file: AuthFileItem) {
           continue
         }
 
-        if (quotaState.value && 'groups' in quotaState.value) {
-          quotaState.value.groups = groups
-          quotaState.value.status = 'success'
+        const currentState = quotaStore.getQuotaState(file.name)
+        if (currentState && 'groups' in currentState) {
+          quotaStore.setQuotaState(file.name, {
+            ...currentState,
+            groups,
+            status: 'success'
+          })
         }
         return
       } catch (err: unknown) {
@@ -447,9 +465,13 @@ export function useQuota(file: AuthFileItem) {
     // All URLs failed
     if (hadSuccess) {
       // At least one request succeeded but couldn't parse, show empty
-      if (quotaState.value && 'groups' in quotaState.value) {
-        quotaState.value.groups = []
-        quotaState.value.status = 'success'
+      const currentState = quotaStore.getQuotaState(file.name)
+      if (currentState && 'groups' in currentState) {
+        quotaStore.setQuotaState(file.name, {
+          ...currentState,
+          groups: [],
+          status: 'success'
+        })
       }
       return
     }
@@ -495,10 +517,14 @@ export function useQuota(file: AuthFileItem) {
     const planTypeFromUsage = normalizePlanType(payload.plan_type ?? payload.planType)
     const windows = buildCodexQuotaWindows(payload)
 
-    if (quotaState.value && 'windows' in quotaState.value) {
-      quotaState.value.windows = windows
-      quotaState.value.planType = planTypeFromUsage ?? planTypeFromFile
-      quotaState.value.status = 'success'
+    const currentState = quotaStore.getQuotaState(file.name)
+    if (currentState && 'windows' in currentState) {
+      quotaStore.setQuotaState(file.name, {
+        ...currentState,
+        windows,
+        planType: planTypeFromUsage ?? planTypeFromFile,
+        status: 'success'
+      })
     }
   }
 
@@ -530,9 +556,13 @@ export function useQuota(file: AuthFileItem) {
     const rawBuckets = Array.isArray(payload?.buckets) ? payload?.buckets : []
 
     if (rawBuckets.length === 0) {
-      if (quotaState.value && 'buckets' in quotaState.value) {
-        quotaState.value.buckets = []
-        quotaState.value.status = 'success'
+      const currentState = quotaStore.getQuotaState(file.name)
+      if (currentState && 'buckets' in currentState) {
+        quotaStore.setQuotaState(file.name, {
+          ...currentState,
+          buckets: [],
+          status: 'success'
+        })
       }
       return
     }
@@ -570,23 +600,32 @@ export function useQuota(file: AuthFileItem) {
 
     const buckets = buildGeminiCliQuotaBuckets(parsedBuckets)
 
-    if (quotaState.value && 'buckets' in quotaState.value) {
-      quotaState.value.buckets = buckets
-      quotaState.value.status = 'success'
+    const currentState = quotaStore.getQuotaState(file.name)
+    if (currentState && 'buckets' in currentState) {
+      quotaStore.setQuotaState(file.name, {
+        ...currentState,
+        buckets,
+        status: 'success'
+      })
     }
   }
 
   const handleError = (res: ApiCallResponse) => {
-    if (quotaState.value) {
-      quotaState.value.status = 'error'
-      quotaState.value.error = getApiCallErrorMessage(res)
-      quotaState.value.errorStatus = res.statusCode
+    const currentState = quotaStore.getQuotaState(file.name)
+    if (currentState) {
+      quotaStore.setQuotaState(file.name, {
+        ...currentState,
+        status: 'error',
+        error: getApiCallErrorMessage(res),
+        errorStatus: res.statusCode
+      })
     }
   }
 
   return {
     quotaState,
     loading,
-    loadQuota
+    loadQuota,
+    resetQuota
   }
 }

@@ -58,6 +58,8 @@ export interface ActivityHeatmapDay {
   date: string
   requests: number
   total_tokens: number
+  total_cost?: number
+  actual_total_cost?: number
 }
 
 export interface ActivityHeatmap {
@@ -131,6 +133,42 @@ export interface RequestTimeline {
   points: RequestTimelinePoint[]
 }
 
+// Interval Timeline types (for scatter chart)
+export interface IntervalTimelinePoint {
+  x: string       // ISO timestamp
+  y: number       // Interval in minutes
+  model: string   // Model name for color coding
+}
+
+export interface IntervalTimelineResult {
+  analysis_period_hours: number
+  total_points: number
+  points: IntervalTimelinePoint[]
+  models?: string[]  // List of unique models
+}
+
+// Request Candidate types (for request tracing)
+export interface RequestCandidate {
+  id: number
+  request_id: string
+  timestamp: string
+  provider: string
+  api_key: string
+  api_key_masked: string
+  status: string        // pending, success, failed, skipped
+  status_code: number
+  success: boolean
+  duration_ms: number
+  error_message?: string
+  candidate_index: number
+  retry_index: number
+}
+
+export interface RequestCandidatesResult {
+  request_id: string
+  candidates: RequestCandidate[]
+}
+
 // ==================== API ====================
 
 export const usageRecordsApi = {
@@ -187,4 +225,16 @@ export const usageRecordsApi = {
    */
   getTimeline: (startTime?: string, endTime?: string): Promise<RequestTimeline> =>
     apiClient.get('/usage-records/timeline', { params: { start_time: startTime, end_time: endTime } }),
+
+  /**
+   * Get request interval data for scatter chart visualization
+   */
+  getIntervalTimeline: (hours: number = 24, limit: number = 5000): Promise<IntervalTimelineResult> =>
+    apiClient.get('/usage-records/interval-timeline', { params: { hours, limit } }),
+
+  /**
+   * Get request candidates for tracing (shows routing attempts)
+   */
+  getRequestCandidates: (recordId: number): Promise<RequestCandidatesResult> =>
+    apiClient.get(`/usage-records/${recordId}/candidates`),
 }

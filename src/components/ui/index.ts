@@ -31,6 +31,10 @@ export { default as SelectValue } from './select-value.vue'
 export { default as SelectContent } from './select-content.vue'
 export { default as SelectItem } from './select-item.vue'
 
+// 增强选择器组件
+export { default as SearchableSelect } from './searchable-select.vue'
+export { default as MultiSelect } from './multi-select.vue'
+
 // 反馈组件
 export { default as Badge } from './badge.vue'
 export { default as Skeleton } from './skeleton.vue'
