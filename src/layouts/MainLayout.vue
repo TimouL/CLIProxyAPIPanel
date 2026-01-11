@@ -390,7 +390,7 @@ const navigation = computed(() => [
   {
     title: '统计',
     items: [
-      { name: '用量统计', href: '/app/usage', icon: BarChart3 },
+      { name: '使用记录', href: '/app/usage', icon: BarChart3 },
       { name: '日志', href: '/app/logs', icon: ScrollText },
     ]
   },

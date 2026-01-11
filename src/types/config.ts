@@ -1,6 +1,6 @@
 /**
  * 配置相关类型定义
- * 与基线 /config 返回结构保持一致（内部使用驼峰形式）
+ * 与基线 /config 返回结构保持一致（支持 kebab-case 和 camelCase）
  */
 
 import type { GeminiKeyConfig, ProviderKeyConfig, OpenAIProviderConfig } from './provider';
@@ -13,6 +13,25 @@ export interface QuotaExceededConfig {
 
 export interface Config {
   debug?: boolean;
+  // Backend uses kebab-case
+  'proxy-url'?: string;
+  'request-retry'?: number;
+  'quota-exceeded'?: QuotaExceededConfig;
+  'usage-statistics-enabled'?: boolean;
+  'request-log'?: boolean;
+  'logging-to-file'?: boolean;
+  'logs-max-total-size-mb'?: number;
+  'ws-auth'?: boolean;
+  'force-model-prefix'?: boolean;
+  'routing-strategy'?: string;
+  'api-keys'?: string[];
+  'gemini-api-key'?: GeminiKeyConfig[];
+  'codex-api-key'?: ProviderKeyConfig[];
+  'claude-api-key'?: ProviderKeyConfig[];
+  'vertex-api-key'?: ProviderKeyConfig[];
+  'openai-compatibility'?: OpenAIProviderConfig[];
+  'oauth-excluded-models'?: Record<string, string[]>;
+  // Legacy camelCase support
   proxyUrl?: string;
   requestRetry?: number;
   quotaExceeded?: QuotaExceededConfig;

@@ -2,115 +2,339 @@
   <PageContainer>
     <PageHeader
       title="认证文件"
-      description="管理用于服务认证的 OAuth 凭证文件"
+      description="管理服务认证凭证与配额状态"
     >
       <template #actions>
-        <Button @click="triggerUpload">
-          <Upload class="w-4 h-4 mr-2" />
-          上传文件
-        </Button>
-        <input
-          ref="fileInput"
-          type="file"
-          accept=".json"
-          class="hidden"
-          @change="handleFileUpload"
-        />
+        <div class="flex items-center gap-2">
+          <div class="relative hidden sm:block">
+            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="搜索文件..."
+              class="h-9 w-64 rounded-lg border border-input bg-background pl-9 pr-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <Button @click="triggerUpload">
+            <Upload class="w-4 h-4 mr-2" />
+            上传文件
+          </Button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".json"
+            class="hidden"
+            @change="handleFileUpload"
+          />
+        </div>
       </template>
     </PageHeader>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <Loader2 class="w-8 h-8 animate-spin text-primary" />
+    <!-- Filter Tags -->
+    <div class="mb-6 flex flex-wrap gap-2">
+      <button
+        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        :class="currentFilter === 'all' 
+          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' 
+          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80'"
+        @click="currentFilter = 'all'"
+      >
+        全部
+      </button>
+      <button
+        v-for="type in availableTypes"
+        :key="type"
+        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 capitalize"
+        :class="currentFilter === type 
+          ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' 
+          : 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80'"
+        @click="currentFilter = type"
+      >
+        {{ type }}
+      </button>
     </div>
 
-    <!-- Empty State -->
-    <CardSection v-else-if="files.length === 0" class="text-center py-12">
-      <FileText class="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-      <h3 class="text-lg font-semibold text-foreground mb-2">暂无认证文件</h3>
-      <p class="text-muted-foreground mb-4">上传 OAuth 凭证 JSON 文件</p>
-      <Button @click="triggerUpload">
-        <Upload class="w-4 h-4 mr-2" />
-        上传文件
-      </Button>
-    </CardSection>
-
-    <!-- Files List -->
-    <div v-else class="space-y-3">
-      <CardSection
-        v-for="file in files"
-        :key="file.name"
-        class="flex items-center justify-between"
-      >
-        <div class="flex items-center gap-4 min-w-0 flex-1">
-          <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-            <FileJson class="w-5 h-5 text-blue-500" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="font-medium text-sm text-foreground truncate">{{ file.name }}</div>
-            <div class="text-xs text-muted-foreground mt-1">
-              {{ formatFileSize(file.size) }}
-              <span v-if="file.modTime" class="ml-2">
-                修改时间: {{ formatDate(file.modTime) }}
-              </span>
+    <!-- Loading State -->
+    <div v-if="loading" class="space-y-8">
+      <div v-for="i in 3" :key="i" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="h-6 w-32 rounded bg-muted animate-pulse"></div>
+          <div class="h-5 w-8 rounded-full bg-muted animate-pulse"></div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-for="j in 3" :key="j" class="rounded-xl border border-border bg-card p-5 shadow-sm h-48 animate-pulse">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3 w-full">
+                <div class="h-10 w-10 rounded-lg bg-muted"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="h-4 w-3/4 rounded bg-muted"></div>
+                  <div class="h-3 w-1/2 rounded bg-muted"></div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-8 space-y-2">
+              <div class="h-2 w-full rounded bg-muted"></div>
+              <div class="h-2 w-full rounded bg-muted"></div>
             </div>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <Button variant="ghost" size="sm" @click="downloadFile(file.name)">
-            <Download class="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" class="text-red-500 hover:text-red-600" @click="deleteFile(file.name)">
-            <Trash2 class="w-4 h-4" />
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <CardSection v-else-if="filteredFiles.length === 0" class="text-center py-20 border-dashed">
+      <FileText class="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+      <h3 class="text-xl font-semibold text-foreground mb-2">
+        {{ searchQuery ? '未找到匹配文件' : '暂无认证文件' }}
+      </h3>
+      <p class="text-muted-foreground mb-6 max-w-sm mx-auto">
+        {{ searchQuery ? '请尝试更换搜索关键词' : '上传 OAuth 凭证 JSON 文件以开始使用' }}
+      </p>
+      <Button v-if="!searchQuery" @click="triggerUpload">
+        <Upload class="w-4 h-4 mr-2" />
+        上传文件
+      </Button>
+      <Button v-else variant="outline" @click="searchQuery = ''">
+        清除搜索
+      </Button>
+    </CardSection>
+
+    <!-- Grouped Files by Type -->
+    <div v-else class="space-y-8">
+      <!-- Antigravity Section -->
+      <AuthFileSection
+        v-if="antigravityFiles.length > 0 && (currentFilter === 'all' || currentFilter === 'antigravity')"
+        title="Antigravity"
+        :files="searchFilteredFiles(antigravityFiles)"
+        :section-class="'bg-gradient-to-b from-cyan-50/10 to-transparent dark:from-cyan-900/10'"
+        @download="downloadFile"
+        @delete="deleteFile"
+        @show-models="showModelsModal"
+        @show-info="showInfoModal"
+        @refresh="handleSectionRefresh"
+      />
+
+      <!-- Codex Section -->
+      <AuthFileSection
+        v-if="codexFiles.length > 0 && (currentFilter === 'all' || currentFilter === 'codex')"
+        title="Codex"
+        :files="searchFilteredFiles(codexFiles)"
+        :section-class="'bg-gradient-to-b from-amber-50/10 to-transparent dark:from-amber-900/10'"
+        @download="downloadFile"
+        @delete="deleteFile"
+        @show-models="showModelsModal"
+        @show-info="showInfoModal"
+        @refresh="handleSectionRefresh"
+      />
+
+      <!-- Gemini CLI Section -->
+      <AuthFileSection
+        v-if="geminiCliFiles.length > 0 && (currentFilter === 'all' || currentFilter === 'gemini-cli')"
+        title="Gemini CLI"
+        :files="searchFilteredFiles(geminiCliFiles)"
+        :section-class="'bg-gradient-to-b from-blue-50/10 to-transparent dark:from-blue-900/10'"
+        @download="downloadFile"
+        @delete="deleteFile"
+        @show-models="showModelsModal"
+        @show-info="showInfoModal"
+        @refresh="handleSectionRefresh"
+      />
+
+      <!-- Other Types Section -->
+      <AuthFileSection
+        v-if="otherFiles.length > 0 && (currentFilter === 'all' || !['antigravity', 'codex', 'gemini-cli'].includes(currentFilter))"
+        title="其他"
+        :files="currentFilter === 'all' ? searchFilteredFiles(otherFiles) : searchFilteredFiles(filteredOtherFiles)"
+        :section-class="'bg-gradient-to-b from-gray-50/10 to-transparent dark:from-gray-900/10'"
+        @download="downloadFile"
+        @delete="deleteFile"
+        @show-models="showModelsModal"
+        @show-info="showInfoModal"
+        @refresh="handleSectionRefresh"
+      />
+    </div>
+
+    <!-- Models Modal -->
+    <div 
+      v-if="modelsModalOpen" 
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="modelsModalOpen = false"
+    >
+      <div class="bg-card rounded-xl border shadow-lg p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">支持的模型 - {{ modelsFileName }}</h3>
+          <Button variant="ghost" size="icon" @click="modelsModalOpen = false">
+            <X class="h-4 w-4" />
           </Button>
         </div>
-      </CardSection>
+        <div v-if="modelsLoading" class="py-8 text-center text-muted-foreground">
+          <RefreshCw class="h-6 w-6 animate-spin mx-auto mb-2" />
+          正在加载模型列表...
+        </div>
+        <div v-else-if="modelsError" class="py-8 text-center">
+          <div class="text-destructive mb-2">{{ modelsError }}</div>
+        </div>
+        <div v-else-if="modelsList.length === 0" class="py-8 text-center text-muted-foreground">
+          <p class="mb-1">该凭证暂无可用模型</p>
+          <p class="text-xs">该认证凭证可能尚未被服务器加载或没有绑定任何模型</p>
+        </div>
+        <div v-else class="space-y-2">
+          <div 
+            v-for="model in modelsList" 
+            :key="model.id"
+            class="px-3 py-2 rounded-lg bg-secondary/50 text-sm cursor-pointer hover:bg-secondary/80 transition-colors"
+            title="点击复制模型 ID"
+            @click="copyModelId(model.id)"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-medium">{{ model.id }}</span>
+              <span v-if="model.type" class="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">{{ model.type }}</span>
+            </div>
+            <div v-if="model.display_name && model.display_name !== model.id" class="text-xs text-muted-foreground mt-1">
+              {{ model.display_name }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div 
+      v-if="infoModalOpen" 
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="infoModalOpen = false"
+    >
+      <div class="bg-card rounded-xl border shadow-lg p-6 w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between mb-4 shrink-0">
+          <h3 class="text-lg font-semibold truncate">{{ selectedFileInfo?.name || '凭证信息' }}</h3>
+          <Button variant="ghost" size="icon" @click="infoModalOpen = false">
+            <X class="h-4 w-4" />
+          </Button>
+        </div>
+        <div v-if="selectedFileInfo" class="flex-1 overflow-auto">
+          <pre class="bg-secondary/30 rounded-lg p-4 text-sm font-mono whitespace-pre-wrap break-all overflow-x-auto">{{ JSON.stringify(selectedFileInfo, null, 2) }}</pre>
+        </div>
+        <div class="flex justify-end gap-2 mt-4 pt-4 border-t shrink-0">
+          <Button variant="outline" @click="infoModalOpen = false">
+            关闭
+          </Button>
+          <Button @click="copyFileInfo">
+            复制
+          </Button>
+        </div>
+      </div>
     </div>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import { apiClient } from '@/api/client'
 import { useToast } from '@/composables/useToast'
+import { useClipboard } from '@/composables/useClipboard'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
 import Button from '@/components/ui/button.vue'
+import AuthFileSection from '@/components/auth/AuthFileSection.vue'
+import type { AuthFileItem, AuthFilesResponse } from '@/types'
 import {
   FileText,
-  FileJson,
   Upload,
-  Download,
-  Trash2,
-  Loader2,
+  Search,
+  X,
+  RefreshCw
 } from 'lucide-vue-next'
-
-interface AuthFile {
-  name: string
-  size?: number
-  modTime?: string
-}
+import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
 
 const { toast } = useToast()
+const { copy } = useClipboard()
 
 const loading = ref(true)
-const files = ref<AuthFile[]>([])
+const files = ref<AuthFileItem[]>([])
 const fileInput = ref<HTMLInputElement>()
+const searchQuery = ref('')
+const currentFilter = ref('all')
 
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return '未知大小'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+// Models modal state
+const modelsModalOpen = ref(false)
+const modelsLoading = ref(false)
+const modelsError = ref<string | null>(null)
+const modelsList = ref<{ id: string; display_name?: string; type?: string }[]>([])
+const modelsFileName = ref('')
+
+// Info modal state
+const infoModalOpen = ref(false)
+const selectedFileInfo = ref<AuthFileItem | null>(null)
+
+// Refresh trigger for child cards - provide a reactive ref that contains files to refresh
+const refreshTrigger = ref<Set<string>>(new Set())
+provide('quotaRefreshTrigger', refreshTrigger)
+
+// Handle section refresh event
+async function handleSectionRefresh(filesToRefresh: AuthFileItem[]) {
+  // Add file names to refresh trigger set
+  const fileNames = filesToRefresh.map(f => f.name)
+  refreshTrigger.value = new Set(fileNames)
+  // Clear after a short delay so cards can pick it up
+  setTimeout(() => {
+    refreshTrigger.value = new Set()
+  }, 100)
 }
 
-function formatDate(dateString: string): string {
-  try {
-    return new Date(dateString).toLocaleDateString()
-  } catch {
-    return dateString
+// Available types for filter
+const availableTypes = computed(() => {
+  const types = new Set<string>()
+  files.value.forEach(f => {
+    if (f.type) types.add(f.type)
+  })
+  return Array.from(types).sort()
+})
+
+// Group files by type
+const antigravityFiles = computed(() => 
+  files.value.filter(f => f.type === 'antigravity')
+)
+
+const codexFiles = computed(() => 
+  files.value.filter(f => f.type === 'codex')
+)
+
+const geminiCliFiles = computed(() => 
+  files.value.filter(f => f.type === 'gemini-cli')
+)
+
+const otherFiles = computed(() => 
+  files.value.filter(f => !['antigravity', 'codex', 'gemini-cli'].includes(f.type || ''))
+)
+
+const filteredOtherFiles = computed(() => 
+  otherFiles.value.filter(f => f.type === currentFilter.value)
+)
+
+// Filtered files for empty state check
+const filteredFiles = computed(() => {
+  let result = files.value
+
+  // Type filter
+  if (currentFilter.value !== 'all') {
+    result = result.filter(f => f.type === currentFilter.value)
   }
+
+  // Search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(f => f.name.toLowerCase().includes(query))
+  }
+
+  return result
+})
+
+// Helper to apply search filter to a file array
+function searchFilteredFiles(fileList: AuthFileItem[]): AuthFileItem[] {
+  if (!searchQuery.value) return fileList
+  const query = searchQuery.value.toLowerCase()
+  return fileList.filter(f => f.name.toLowerCase().includes(query))
 }
 
 function triggerUpload() {
@@ -120,7 +344,7 @@ function triggerUpload() {
 async function fetchFiles() {
   loading.value = true
   try {
-    const data = await apiClient.get<{ files: AuthFile[] }>('/auth-files')
+    const data = await apiClient.get<AuthFilesResponse>('/auth-files')
     files.value = data.files || []
   } catch {
     toast({ title: '加载认证文件失败', variant: 'destructive' })
@@ -164,6 +388,8 @@ async function downloadFile(name: string) {
 }
 
 async function deleteFile(name: string) {
+  if (!confirm(`确定要删除 ${name} 吗？`)) return
+  
   try {
     await apiClient.delete(`/auth-files?name=${encodeURIComponent(name)}`)
     toast({ title: '文件已删除' })
@@ -171,6 +397,82 @@ async function deleteFile(name: string) {
   } catch {
     toast({ title: '删除文件失败', variant: 'destructive' })
   }
+}
+
+// Show models modal - fetches from /auth-files/models API
+async function showModelsModal(file: AuthFileItem) {
+  modelsModalOpen.value = true
+  modelsLoading.value = true
+  modelsError.value = null
+  modelsList.value = []
+  modelsFileName.value = file.name
+
+  try {
+    const data = await apiClient.get<{ models: { id: string; display_name?: string; type?: string }[] }>(
+      `/auth-files/models?name=${encodeURIComponent(file.name)}`
+    )
+    const models = data?.models
+    if (Array.isArray(models)) {
+      modelsList.value = models
+    } else {
+      modelsList.value = []
+    }
+  } catch (err) {
+    // Check for 404 (API not supported)
+    const errorMessage = err instanceof Error ? err.message : ''
+    if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Not Found')) {
+      modelsError.value = '当前版本不支持此功能，请更新 CLI Proxy API'
+    } else {
+      modelsError.value = errorMessage || '获取模型列表失败'
+    }
+  } finally {
+    modelsLoading.value = false
+  }
+}
+
+// Show info modal
+function showInfoModal(file: AuthFileItem) {
+  selectedFileInfo.value = file
+  infoModalOpen.value = true
+}
+
+// Copy model ID to clipboard
+async function copyModelId(modelId: string) {
+  const success = await copy(modelId)
+  if (success) {
+    toast({ title: '已复制到剪贴板' })
+  } else {
+    toast({ title: '复制失败', variant: 'destructive' })
+  }
+}
+
+// Copy file info JSON to clipboard
+async function copyFileInfo() {
+  if (!selectedFileInfo.value) return
+  const text = JSON.stringify(selectedFileInfo.value, null, 2)
+  const success = await copy(text)
+  if (success) {
+    toast({ title: '已复制到剪贴板' })
+  } else {
+    toast({ title: '复制失败', variant: 'destructive' })
+  }
+}
+
+// Helper: Format file size
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '未知大小'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// Helper: Format date
+function formatDate(dateValue?: number | string): string {
+  if (!dateValue) return ''
+  if (typeof dateValue === 'number') {
+    return formatUnixTimestamp(dateValue) || ''
+  }
+  return formatDateOnly(dateValue) || ''
 }
 
 onMounted(fetchFiles)

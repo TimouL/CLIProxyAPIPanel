@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
     <div class="flex-1">
       <div class="flex items-center gap-3">
         <slot name="icon">

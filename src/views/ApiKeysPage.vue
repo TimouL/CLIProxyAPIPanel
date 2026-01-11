@@ -6,7 +6,7 @@
     >
       <template #actions>
         <div class="flex gap-2">
-          <Button variant="outline" size="sm" @click="refreshKeys" :disabled="loading">
+          <Button variant="outline" @click="refreshKeys" :disabled="loading">
             <RefreshCw :class="['w-4 h-4 mr-2', loading && 'animate-spin']" />
             刷新
           </Button>
@@ -35,7 +35,7 @@
                 代理 API 密钥
               </h3>
               <p class="text-xs text-muted-foreground mt-0.5">
-                活跃 {{ activeCount }} · 禁用 {{ inactiveCount }} · 共 {{ apiKeys.length }} 个
+                共 {{ apiKeys.length }} 个
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -49,25 +49,6 @@
                   class="h-8 w-28 sm:w-40 pl-8 pr-2 text-xs"
                 />
               </div>
-
-              <!-- 分隔线 -->
-              <div class="hidden sm:block h-4 w-px bg-border" />
-
-              <!-- 状态筛选 -->
-              <Select v-model="filterStatus">
-                <SelectTrigger class="w-20 sm:w-28 h-8 text-xs border-border/60">
-                  <SelectValue placeholder="全部状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="status in statusFilters"
-                    :key="status.value"
-                    :value="status.value"
-                  >
-                    {{ status.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>
@@ -116,17 +97,14 @@
                 <TableHead class="w-[200px] h-12 font-semibold">
                   密钥信息
                 </TableHead>
-                <TableHead class="w-[150px] h-12 font-semibold">
-                  名称
-                </TableHead>
                 <TableHead class="w-[100px] h-12 font-semibold text-center">
                   使用次数
                 </TableHead>
                 <TableHead class="w-[150px] h-12 font-semibold">
                   最近使用
                 </TableHead>
-                <TableHead class="w-[70px] h-12 font-semibold text-center">
-                  状态
+                <TableHead class="w-[150px] h-12 font-semibold text-center">
+                  Token消耗
                 </TableHead>
                 <TableHead class="w-[130px] h-12 font-semibold text-center">
                   操作
@@ -162,22 +140,6 @@
                     </div>
                   </div>
                 </TableCell>
-                <TableCell class="py-4">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm" :class="apiKey.name ? 'text-foreground' : 'text-muted-foreground italic'">
-                      {{ apiKey.name || '未命名' }}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="h-6 w-6"
-                      title="编辑名称"
-                      @click="openEditNameDialog(apiKey)"
-                    >
-                      <Pencil class="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TableCell>
                 <TableCell class="py-4 text-center">
                   <span class="font-medium text-foreground">
                     {{ apiKey.usageCount.toLocaleString() }}
@@ -194,11 +156,14 @@
                   </div>
                 </TableCell>
                 <TableCell class="py-4 text-center">
-                  <Switch
-                    :model-value="apiKey.isActive"
-                    :disabled="togglingId === apiKey.id"
-                    @update:model-value="toggleKeyActive(apiKey)"
-                  />
+                  <div class="text-xs">
+                    <div v-if="apiKey.inputTokens || apiKey.outputTokens">
+                      <span class="text-green-600 dark:text-green-400">{{ formatTokenCount(apiKey.inputTokens) }}</span>
+                      <span class="text-muted-foreground mx-1">/</span>
+                      <span class="text-blue-600 dark:text-blue-400">{{ formatTokenCount(apiKey.outputTokens) }}</span>
+                    </div>
+                    <span v-else class="text-muted-foreground">-</span>
+                  </div>
                 </TableCell>
                 <TableCell class="py-4">
                   <div class="flex justify-center gap-1">
@@ -256,21 +221,10 @@
                       <Copy class="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <div
-                    class="text-sm font-semibold"
-                    :class="apiKey.name ? 'text-foreground' : 'text-muted-foreground'"
-                  >
-                    {{ apiKey.name || '未命名密钥' }}
-                  </div>
                 </div>
-                <Switch
-                  :model-value="apiKey.isActive"
-                  :disabled="togglingId === apiKey.id"
-                  @update:model-value="toggleKeyActive(apiKey)"
-                />
               </div>
 
-              <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="grid grid-cols-3 gap-2 text-xs">
                 <div class="p-2 bg-muted/40 rounded-lg">
                   <div class="text-muted-foreground mb-1">
                     使用次数
@@ -287,18 +241,22 @@
                     {{ apiKey.lastUsedAt ? formatDate(apiKey.lastUsedAt) : '暂无' }}
                   </div>
                 </div>
+                <div class="p-2 bg-muted/40 rounded-lg">
+                  <div class="text-muted-foreground mb-1">
+                    Token消耗
+                  </div>
+                  <div class="font-semibold">
+                    <span v-if="apiKey.inputTokens || apiKey.outputTokens">
+                      <span class="text-green-600 dark:text-green-400">{{ formatTokenCount(apiKey.inputTokens) }}</span>
+                      <span class="text-muted-foreground">/</span>
+                      <span class="text-blue-600 dark:text-blue-400">{{ formatTokenCount(apiKey.outputTokens) }}</span>
+                    </span>
+                    <span v-else>-</span>
+                  </div>
+                </div>
               </div>
 
               <div class="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="flex-1"
-                  @click="openEditNameDialog(apiKey)"
-                >
-                  <Pencil class="h-3.5 w-3.5 mr-1.5" />
-                  名称
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -325,72 +283,33 @@
       </div>
     </Card>
 
-    <!-- Add/Edit Key Dialog -->
-    <Dialog v-model:open="showDialog">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{{ isEditing ? '编辑 API 密钥' : '添加 API 密钥' }}</DialogTitle>
-          <DialogDescription>
-            {{ isEditing ? '修改现有的 API 密钥' : '创建新的 API 密钥用于客户端访问' }}
-          </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4 py-4">
-          <div>
-            <label class="block text-sm font-medium text-foreground mb-2">API 密钥</label>
-            <Input
-              v-model="formKey"
-              :placeholder="isEditing ? '输入新的 API 密钥' : '输入 API 密钥或留空自动生成'"
-              :disabled="saving"
-            />
-            <p v-if="formError" class="text-xs text-red-500 mt-1">{{ formError }}</p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-foreground mb-2">名称 (可选)</label>
-            <Input
-              v-model="formName"
-              placeholder="例如: 开发环境, 生产环境"
-              :disabled="saving"
-            />
-          </div>
+    <!-- Add/Edit Key Drawer -->
+    <Drawer 
+      :open="showDialog" 
+      @update:open="showDialog = $event" 
+      size="md"
+      :title="isEditing ? '编辑 API 密钥' : '添加 API 密钥'"
+      :description="isEditing ? '修改现有的 API 密钥' : '创建新的 API 密钥用于客户端访问'"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">API 密钥</label>
+          <Input
+            v-model="formKey"
+            :placeholder="isEditing ? '输入新的 API 密钥' : '输入 API 密钥或留空自动生成'"
+            :disabled="saving"
+          />
+          <p v-if="formError" class="text-xs text-red-500 mt-1">{{ formError }}</p>
         </div>
-        <DialogFooter>
-          <Button variant="outline" @click="closeDialog" :disabled="saving">取消</Button>
-          <Button @click="handleSave" :disabled="saving">
-            <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
-            {{ isEditing ? '更新' : '添加' }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <!-- Edit Name Dialog -->
-    <Dialog v-model:open="showNameDialog">
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>编辑密钥名称</DialogTitle>
-          <DialogDescription>
-            设置一个便于识别的名称
-          </DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4 py-4">
-          <div>
-            <label class="block text-sm font-medium text-foreground mb-2">名称</label>
-            <Input
-              v-model="editingName"
-              placeholder="例如: 开发环境, 生产环境"
-              :disabled="savingName"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" @click="showNameDialog = false" :disabled="savingName">取消</Button>
-          <Button @click="saveKeyName" :disabled="savingName">
-            <Loader2 v-if="savingName" class="w-4 h-4 mr-2 animate-spin" />
-            保存
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <template #footer>
+        <Button @click="handleSave" :disabled="saving">
+          <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
+          {{ isEditing ? '更新' : '添加' }}
+        </Button>
+        <Button variant="outline" @click="closeDialog" :disabled="saving">取消</Button>
+      </template>
+    </Drawer>
 
     <!-- Delete Confirmation Dialog -->
     <Dialog v-model:open="showDeleteConfirm">
@@ -429,7 +348,6 @@ import {
   Card,
   Button,
   Input,
-  Switch,
   Skeleton,
   Table,
   TableHeader,
@@ -437,17 +355,13 @@ import {
   TableRow,
   TableHead,
   TableCell,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  Drawer,
 } from '@/components/ui'
 import {
   Key,
@@ -455,12 +369,12 @@ import {
   Copy,
   Trash2,
   Loader2,
-  Pencil,
   RefreshCw,
   Search,
   SquarePen,
 } from 'lucide-vue-next'
 import type { ApiKeyEntry, ApiKeyInfo } from '@/types'
+import { formatDate } from '@/utils/format'
 
 const { toast } = useToast()
 const { copy } = useClipboard()
@@ -470,19 +384,9 @@ const loading = ref(true)
 const rawApiKeys = ref<ApiKeyEntry[]>([])
 const showDialog = ref(false)
 const formKey = ref('')
-const formName = ref('')
 const formError = ref('')
 const saving = ref(false)
 const editingApiKey = ref<ApiKeyInfo | null>(null)
-
-// 名称编辑
-const showNameDialog = ref(false)
-const editingNameId = ref<string | null>(null)
-const editingName = ref('')
-const savingName = ref(false)
-
-// Toggle state
-const togglingId = ref<string | null>(null)
 
 // Delete confirmation
 const showDeleteConfirm = ref(false)
@@ -491,19 +395,12 @@ const deletingId = ref<string | null>(null)
 
 // 筛选
 const searchQuery = ref('')
-const filterStatus = ref<'all' | 'active' | 'inactive'>('all')
-
-const statusFilters = [
-  { value: 'all' as const, label: '全部状态' },
-  { value: 'active' as const, label: '活跃' },
-  { value: 'inactive' as const, label: '禁用' }
-]
 
 // Computed
 const isEditing = computed(() => editingApiKey.value !== null)
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value !== '' || filterStatus.value !== 'all'
+  return searchQuery.value !== ''
 })
 
 // 转换后端数据为前端显示格式
@@ -517,6 +414,8 @@ const apiKeys = computed<ApiKeyInfo[]>(() => {
       name: raw.name || '',
       isActive: raw['is-active'] ?? true,
       usageCount: raw['usage-count'] || 0,
+      inputTokens: raw['input-tokens'] || 0,
+      outputTokens: raw['output-tokens'] || 0,
       lastUsedAt: raw['last-used-at'] || null,
       createdAt: raw['created-at'] || null
     }
@@ -531,23 +430,13 @@ const filteredApiKeys = computed(() => {
   if (searchQuery.value) {
     const keywords = searchQuery.value.toLowerCase().split(/\s+/).filter(k => k.length > 0)
     result = result.filter(key => {
-      const searchableText = `${key.name} ${key.key}`.toLowerCase()
+      const searchableText = `${key.key}`.toLowerCase()
       return keywords.every(keyword => searchableText.includes(keyword))
     })
   }
 
-  // 状态筛选
-  if (filterStatus.value === 'active') {
-    result = result.filter(key => key.isActive)
-  } else if (filterStatus.value === 'inactive') {
-    result = result.filter(key => !key.isActive)
-  }
-
   return result
 })
-
-const activeCount = computed(() => apiKeys.value.filter(key => key.isActive).length)
-const inactiveCount = computed(() => apiKeys.value.length - activeCount.value)
 
 // Helpers
 function maskKey(key: string): string {
@@ -555,14 +444,15 @@ function maskKey(key: string): string {
   return `${key.substring(0, 4)}${'*'.repeat(Math.min(key.length - 8, 20))}${key.substring(key.length - 4)}`
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+function formatTokenCount(count: number): string {
+  if (!count || count === 0) return '0'
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1) + 'M'
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1) + 'K'
+  }
+  return count.toLocaleString()
 }
 
 // 验证 API 密钥字符
@@ -577,7 +467,6 @@ async function copyKey(key: string) {
 
 function clearFilters() {
   searchQuery.value = ''
-  filterStatus.value = 'all'
 }
 
 async function fetchKeys() {
@@ -601,7 +490,6 @@ async function refreshKeys() {
 function openAddDialog() {
   editingApiKey.value = null
   formKey.value = ''
-  formName.value = ''
   formError.value = ''
   showDialog.value = true
 }
@@ -609,59 +497,13 @@ function openAddDialog() {
 function openEditDialog(apiKey: ApiKeyInfo) {
   editingApiKey.value = apiKey
   formKey.value = apiKey.key
-  formName.value = apiKey.name
   formError.value = ''
   showDialog.value = true
-}
-
-function openEditNameDialog(apiKey: ApiKeyInfo) {
-  editingNameId.value = apiKey.id
-  editingName.value = apiKey.name
-  showNameDialog.value = true
-}
-
-async function saveKeyName() {
-  if (!editingNameId.value) return
-
-  savingName.value = true
-  try {
-    await apiClient.patch('/api-keys', {
-      id: editingNameId.value,
-      name: editingName.value.trim()
-    })
-    toast({ title: '名称已更新' })
-    await fetchKeys()
-  } catch {
-    toast({ title: '更新名称失败', variant: 'destructive' })
-  } finally {
-    savingName.value = false
-    showNameDialog.value = false
-    editingNameId.value = null
-    editingName.value = ''
-  }
-}
-
-async function toggleKeyActive(apiKey: ApiKeyInfo) {
-  togglingId.value = apiKey.id
-  try {
-    const newState = !apiKey.isActive
-    await apiClient.patch('/api-keys', {
-      id: apiKey.id,
-      'is-active': newState
-    })
-    toast({ title: newState ? '密钥已启用' : '密钥已禁用' })
-    await fetchKeys()
-  } catch {
-    toast({ title: '切换状态失败', variant: 'destructive' })
-  } finally {
-    togglingId.value = null
-  }
 }
 
 function closeDialog() {
   showDialog.value = false
   formKey.value = ''
-  formName.value = ''
   formError.value = ''
   editingApiKey.value = null
 }
@@ -696,11 +538,6 @@ async function handleSave() {
         patchPayload['api-key'] = trimmedKey
       }
       
-      // 如果名称变了
-      if (formName.value.trim() !== editingApiKey.value.name) {
-        patchPayload.name = formName.value.trim()
-      }
-      
       // 只有有变化时才发请求
       if (Object.keys(patchPayload).length > 1) {
         await apiClient.patch('/api-keys', patchPayload)
@@ -711,8 +548,7 @@ async function handleSave() {
       // 添加新密钥
       const keyToAdd = trimmedKey || crypto.randomUUID()
       await apiClient.post('/api-keys', {
-        'api-key': keyToAdd,
-        name: formName.value.trim() || undefined
+        'api-key': keyToAdd
       })
       
       toast({ title: 'API 密钥添加成功' })

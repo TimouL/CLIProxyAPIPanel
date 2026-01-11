@@ -8,6 +8,12 @@ export interface AmpcodeModelMapping {
 }
 
 export interface AmpcodeConfig {
+  // Backend uses kebab-case
+  'upstream-url'?: string;
+  'upstream-api-key'?: string;
+  'model-mappings'?: AmpcodeModelMapping[];
+  'force-model-mappings'?: boolean;
+  // Legacy camelCase support
   upstreamUrl?: string;
   upstreamApiKey?: string;
   modelMappings?: AmpcodeModelMapping[];

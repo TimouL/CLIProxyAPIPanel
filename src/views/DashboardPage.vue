@@ -293,7 +293,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-vue-next'
-import { formatTokens } from '@/utils/format'
+import { formatTokens, formatRelativeDate, formatDateForChart as formatDateForChartUtil } from '@/utils/format'
 
 const authStore = useAuthStore()
 const loading = ref(false)
@@ -468,21 +468,11 @@ async function loadData() {
 }
 
 function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', weekday: 'short' })
-  } catch {
-    return dateString
-  }
+  return formatRelativeDate(dateString) || dateString
 }
 
 function formatDateForChart(dateString: string): string {
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
-  } catch {
-    return dateString
-  }
+  return formatDateForChartUtil(dateString) || dateString
 }
 
 function formatResponseTime(seconds: number): string {

@@ -19,6 +19,10 @@ export interface ApiKeyEntry {
   'is-active': boolean
   /** 使用次数统计 */
   'usage-count'?: number
+  /** 输入Token消耗 */
+  'input-tokens'?: number
+  /** 输出Token消耗 */
+  'output-tokens'?: number
   /** 最后使用时间 (ISO 格式) */
   'last-used-at'?: string
   /** 创建时间 (ISO 格式) */
@@ -47,6 +51,10 @@ export interface ApiKeyInfo {
   isActive: boolean
   /** 使用次数统计 */
   usageCount: number
+  /** 输入Token消耗 */
+  inputTokens: number
+  /** 输出Token消耗 */
+  outputTokens: number
   /** 最后使用时间 (ISO 格式) */
   lastUsedAt: string | null
   /** 创建时间 (ISO 格式) */

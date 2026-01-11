@@ -76,7 +76,7 @@
                 <div class="font-medium text-foreground">用量统计</div>
                 <div class="text-xs text-muted-foreground">跟踪 API 使用情况</div>
               </div>
-              <Switch v-model="config.usageStatisticsEnabled" />
+              <Switch v-model="config['usage-statistics-enabled']" />
             </CardSection>
 
             <CardSection class="flex items-center justify-between">
@@ -84,7 +84,7 @@
                 <div class="font-medium text-foreground">文件日志</div>
                 <div class="text-xs text-muted-foreground">将日志写入文件</div>
               </div>
-              <Switch v-model="config.loggingToFile" />
+              <Switch v-model="config['logging-to-file']" />
             </CardSection>
 
             <CardSection class="flex items-center justify-between">
@@ -92,7 +92,7 @@
                 <div class="font-medium text-foreground">WebSocket 认证</div>
                 <div class="text-xs text-muted-foreground">要求 WS 认证</div>
               </div>
-              <Switch v-model="config.wsAuth" />
+              <Switch v-model="config['ws-auth']" />
             </CardSection>
           </div>
         </Section>
@@ -102,11 +102,11 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-foreground mb-2">重试次数</label>
-              <Input v-model.number="config.requestRetry" type="number" min="0" max="10" />
+              <Input v-model.number="config['request-retry']" type="number" min="0" max="10" />
             </div>
             <div>
               <label class="block text-sm font-medium text-foreground mb-2">代理 URL</label>
-              <Input v-model="config.proxyUrl" placeholder="http://proxy:8080" />
+              <Input v-model="config['proxy-url']" placeholder="http://proxy:8080" />
             </div>
           </div>
         </Section>
@@ -178,11 +178,11 @@ interface Config {
   host?: string
   port?: number
   debug?: boolean
-  usageStatisticsEnabled?: boolean
-  loggingToFile?: boolean
-  wsAuth?: boolean
-  requestRetry?: number
-  proxyUrl?: string
+  'usage-statistics-enabled'?: boolean
+  'logging-to-file'?: boolean
+  'ws-auth'?: boolean
+  'request-retry'?: number
+  'proxy-url'?: string
   [key: string]: any
 }
 

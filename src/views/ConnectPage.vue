@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[#faf9f5] dark:bg-[#191714] p-4">
+  <div class="min-h-screen flex flex-col items-center justify-center bg-[#faf9f5] dark:bg-[#191714] p-4">
     <!-- Paper texture overlay -->
     <div
       class="absolute inset-0 pointer-events-none z-0 opacity-[0.03] mix-blend-multiply"

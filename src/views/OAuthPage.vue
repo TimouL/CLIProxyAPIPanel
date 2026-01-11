@@ -22,16 +22,6 @@
               <p class="text-xs text-muted-foreground">{{ provider.description }}</p>
             </div>
           </div>
-          <!-- Gemini Project ID Input -->
-          <div v-if="provider.id === 'gemini'" class="mb-3">
-            <label class="text-xs text-muted-foreground mb-1 block">项目 ID（可选）</label>
-            <Input
-              v-model="geminiProjectId"
-              placeholder="留空将自动选择第一个可用项目"
-              size="sm"
-              class="text-sm"
-            />
-          </div>
           <div class="mt-auto">
             <Button
               size="sm"
@@ -176,7 +166,7 @@
             <div>
               <div class="font-medium text-foreground capitalize">{{ provider }}</div>
               <div class="text-xs text-muted-foreground">
-                {{ status.authenticated ? '已认证' : '未认证' }}
+                {{ status.authenticated ? '已认证' : '未开始' }}
                 <span v-if="status.count"> - {{ status.count }} 个凭证</span>
               </div>
             </div>

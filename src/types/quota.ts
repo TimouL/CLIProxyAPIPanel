@@ -144,3 +144,20 @@ export interface CodexQuotaState {
   error?: string;
   errorStatus?: number;
 }
+
+// API Call types for proxy endpoint
+export interface ApiCallRequest {
+  authIndex: string
+  method: 'GET' | 'POST'
+  url: string
+  header?: Record<string, string>
+  data?: string
+}
+
+export interface ApiCallResponse {
+  statusCode: number
+  body?: unknown
+  bodyText?: string
+  error?: string
+}
+

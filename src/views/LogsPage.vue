@@ -107,6 +107,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-vue-next'
+import { formatTime as formatTimeUtil } from '@/utils/format'
 
 interface LogResponse {
   lines: string[]
@@ -140,11 +141,7 @@ const filteredLogs = computed(() => {
 })
 
 function formatTime(timestamp: string): string {
-  try {
-    return new Date(timestamp).toLocaleTimeString()
-  } catch {
-    return timestamp
-  }
+  return formatTimeUtil(timestamp) || timestamp
 }
 
 function getLogLevelVariant(level: string): 'default' | 'secondary' | 'destructive' | 'outline' {

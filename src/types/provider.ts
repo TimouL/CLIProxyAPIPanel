@@ -11,13 +11,22 @@ export interface ModelAlias {
 }
 
 export interface ApiKeyEntry {
-  apiKey: string;
+  // Backend uses kebab-case
+  'api-key'?: string;
+  'proxy-url'?: string;
+  // Legacy camelCase support
+  apiKey?: string;
   proxyUrl?: string;
   headers?: Record<string, string>;
 }
 
 export interface GeminiKeyConfig {
-  apiKey: string;
+  // Backend uses kebab-case
+  'api-key'?: string;
+  'base-url'?: string;
+  'excluded-models'?: string[];
+  // Legacy camelCase support
+  apiKey?: string;
   prefix?: string;
   baseUrl?: string;
   headers?: Record<string, string>;
@@ -25,7 +34,13 @@ export interface GeminiKeyConfig {
 }
 
 export interface ProviderKeyConfig {
-  apiKey: string;
+  // Backend uses kebab-case
+  'api-key'?: string;
+  'base-url'?: string;
+  'proxy-url'?: string;
+  'excluded-models'?: string[];
+  // Legacy camelCase support
+  apiKey?: string;
   prefix?: string;
   baseUrl?: string;
   proxyUrl?: string;
@@ -37,8 +52,12 @@ export interface ProviderKeyConfig {
 export interface OpenAIProviderConfig {
   name: string;
   prefix?: string;
-  baseUrl: string;
-  apiKeyEntries: ApiKeyEntry[];
+  // Backend uses kebab-case
+  'base-url'?: string;
+  'api-key-entries'?: ApiKeyEntry[];
+  // Legacy camelCase support
+  baseUrl?: string;
+  apiKeyEntries?: ApiKeyEntry[];
   headers?: Record<string, string>;
   models?: ModelAlias[];
   priority?: number;

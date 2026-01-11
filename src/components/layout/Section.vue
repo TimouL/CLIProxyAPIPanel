@@ -2,7 +2,7 @@
   <section :class="sectionClasses">
     <div
       v-if="title || description || $slots.header"
-      class="mb-6"
+      class="mb-8"
     >
       <slot name="header">
         <div class="flex items-center justify-between">

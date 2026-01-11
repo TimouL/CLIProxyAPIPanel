@@ -77,6 +77,7 @@ const chartOption = computed(() => {
     yAxis: isHorizontal ? {
       type: 'category',
       data: labels,
+      inverse: true, // 反转 y 轴，让使用量多的在上面
       axisLine: { lineStyle: { color: 'rgba(156, 163, 175, 0.3)' } },
       axisLabel: { color: 'rgb(107, 114, 128)' }
     } : {

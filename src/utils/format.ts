@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+
 // Token formatting - intelligent display based on value size
 export function formatTokens(num: number | undefined | null): string {
   if (num === undefined || num === null || num === 0) {
@@ -90,17 +92,116 @@ export function formatNumber(num: number | undefined | null): string {
   return num.toLocaleString('zh-CN')
 }
 
-// Date formatting
+// Date formatting - 完整日期时间 (YYYY/MM/DD HH:mm)
 export function formatDate(dateString: string | undefined | null): string {
   if (!dateString) return '未知'
+  const d = dayjs(dateString)
+  if (!d.isValid()) return '未知'
+  return d.format('YYYY/MM/DD HH:mm')
+}
 
-  return new Date(dateString).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+// Date formatting - 仅时间 (HH:mm:ss)
+export function formatTime(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return dateString || ''
+  return d.format('HH:mm:ss')
+}
+
+// Date formatting - 完整日期时间含秒 (YYYY/MM/DD HH:mm:ss)
+export function formatDateTime(dateString: string | undefined | null): string {
+  if (!dateString) return '未知'
+  const d = dayjs(dateString)
+  if (!d.isValid()) return '未知'
+  return d.format('YYYY/MM/DD HH:mm:ss')
+}
+
+// Date formatting - 短日期 (MM/DD HH:mm:ss)
+export function formatShortDateTime(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return dateString || ''
+  return d.format('MM/DD HH:mm:ss')
+}
+
+// Date formatting - 仅日期 (YYYY/MM/DD)
+export function formatDateOnly(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return ''
+  return d.format('YYYY/MM/DD')
+}
+
+// Date formatting - 短日期 (MM/DD)
+export function formatShortDate(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return dateString || ''
+  return d.format('MM/DD')
+}
+
+// Date formatting - 图表用日期 (M/D)
+export function formatDateForChart(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return dateString || ''
+  return d.format('M/D')
+}
+
+// Date formatting - 智能相对日期（今天/昨天/MM/DD 周X）
+export function formatRelativeDate(dateString: string | undefined | null): string {
+  if (!dateString) return ''
+  const d = dayjs(dateString)
+  if (!d.isValid()) return dateString || ''
+  
+  const today = dayjs().startOf('day')
+  const targetDate = d.startOf('day')
+  
+  if (targetDate.isSame(today)) {
+    return '今天'
+  }
+  if (targetDate.isSame(today.subtract(1, 'day'))) {
+    return '昨天'
+  }
+  
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return `${d.format('MM/DD')} ${weekdays[d.day()]}`
+}
+
+// Date formatting - Unix 时间戳（秒或毫秒）
+export function formatUnixTimestamp(timestamp: number | undefined | null): string {
+  if (!timestamp) return ''
+  // 判断是秒还是毫秒
+  const ts = timestamp > 9999999999 ? timestamp : timestamp * 1000
+  const d = dayjs(ts)
+  if (!d.isValid()) return ''
+  return d.format('YYYY/MM/DD')
+}
+
+// Date formatting - Unix 时间戳完整格式
+export function formatUnixTimestampFull(timestamp: number | undefined | null): string {
+  if (!timestamp) return ''
+  const ts = timestamp > 9999999999 ? timestamp : timestamp * 1000
+  const d = dayjs(ts)
+  if (!d.isValid()) return ''
+  return d.format('MM/DD HH:mm:ss')
+}
+
+// Date formatting - 智能时间显示（今天显示时间，否则显示日期+时间）
+export function formatSmartDateTime(timestamp: number | undefined | null): string {
+  if (!timestamp) return ''
+  const ts = timestamp > 9999999999 ? timestamp : timestamp * 1000
+  const d = dayjs(ts)
+  if (!d.isValid()) return ''
+  
+  const now = dayjs()
+  if (d.isSame(now, 'day')) {
+    return d.format('HH:mm')
+  }
+  if (d.isSame(now, 'year')) {
+    return d.format('MM/DD HH:mm')
+  }
+  return d.format('YYYY/MM/DD')
 }
 
 // Model price formatting (already in per 1M tokens)

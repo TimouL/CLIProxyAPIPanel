@@ -65,3 +65,9 @@ export { default as RefreshButton } from './refresh-button.vue'
 
 // Tooltip 提示系列
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
+
+// Sheet 侧边抽屉 (旧版)
+export { Sheet } from './sheet'
+
+// Drawer 抽屉 (新版 - 推荐)
+export { Drawer } from './drawer'

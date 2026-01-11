@@ -1,6 +1,7 @@
 /**
  * 使用统计相关类型
  * 基于原项目 src/modules/usage.js
+ * 支持 kebab-case 和 snake_case 和 camelCase
  */
 
 // 时间段类型
@@ -14,39 +15,68 @@ export interface DataPoint {
 
 // 模型使用统计
 export interface ModelUsage {
-  modelName: string;
+  modelName?: string;
+  'model-name'?: string;
+  model_name?: string;
   requests: number;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  cost: number;
+  // Backend uses snake_case
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  // Legacy camelCase
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cost?: number;
 }
 
 // 使用统计数据
 export interface UsageStats {
   overview: {
-    totalRequests: number;
-    totalTokens: number;
-    totalCost: number;
+    // Backend uses snake_case
+    total_requests?: number;
+    total_tokens?: number;
+    total_cost?: number;
+    // Legacy camelCase
+    totalRequests?: number;
+    totalTokens?: number;
+    totalCost?: number;
   };
-  requestsData: {
+  requestsData?: {
     hour: DataPoint[];
     day: DataPoint[];
   };
-  tokensData: {
+  requests_data?: {
     hour: DataPoint[];
     day: DataPoint[];
   };
-  costData: {
+  tokensData?: {
     hour: DataPoint[];
     day: DataPoint[];
   };
-  modelStats: ModelUsage[];
+  tokens_data?: {
+    hour: DataPoint[];
+    day: DataPoint[];
+  };
+  costData?: {
+    hour: DataPoint[];
+    day: DataPoint[];
+  };
+  cost_data?: {
+    hour: DataPoint[];
+    day: DataPoint[];
+  };
+  modelStats?: ModelUsage[];
+  model_stats?: ModelUsage[];
 }
 
 // 模型价格
 export interface ModelPrice {
-  modelName: string;
-  inputPricePer1M: number;
-  outputPricePer1M: number;
+  modelName?: string;
+  'model-name'?: string;
+  model_name?: string;
+  inputPricePer1M?: number;
+  input_price_per_1m?: number;
+  outputPricePer1M?: number;
+  output_price_per_1m?: number;
 }
