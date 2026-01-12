@@ -5,6 +5,14 @@
 // 缓存过期时间（毫秒）
 export const CACHE_EXPIRY_MS = 30 * 1000
 
+// Toast 配置
+export const TOAST_CONFIG = {
+  SUCCESS_DURATION: 3000,
+  ERROR_DURATION: 5000,
+  WARNING_DURATION: 4000,
+  INFO_DURATION: 3000,
+} as const
+
 // 网络与版本信息
 export const DEFAULT_API_PORT = 8317
 export const MANAGEMENT_API_PREFIX = '/v0/management'

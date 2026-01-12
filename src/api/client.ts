@@ -222,7 +222,7 @@ class ApiClient {
   }
 
   /**
-   * 获取原始响应（用于下载等场景）
+   * 获取原始响应（不解析 data）
    */
   async getRaw(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse> {
     return this.instance.get(url, config)

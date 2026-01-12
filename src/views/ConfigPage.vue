@@ -1,382 +1,342 @@
 <template>
   <PageContainer>
-    <!-- 操作按钮区域 -->
-    <div class="flex justify-end mb-4">
-      <div class="flex items-center gap-2">
-        <Button variant="outline" @click="resetConfig" :disabled="!hasChanges">
-          重置
-        </Button>
-        <Button @click="saveConfig" :disabled="saving || !hasChanges">
-          <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
-          <Save v-else class="w-4 h-4 mr-2" />
-          保存更改
-        </Button>
+    <div class="config-page">
+      <!-- 页面标题 -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-foreground">配置管理</h1>
+        <p class="text-sm text-muted-foreground mt-1">
+          管理系统配置文件，支持可视化编辑和源代码编辑两种模式
+        </p>
       </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <Loader2 class="w-8 h-8 animate-spin text-primary" />
-    </div>
-
-    <template v-else>
-      <!-- View Mode Toggle -->
-      <div class="flex items-center gap-4 mb-6">
-        <Button
-          :variant="viewMode === 'visual' ? 'default' : 'outline'"
-          size="sm"
-          @click="viewMode = 'visual'"
+      <!-- 标签页切换 -->
+      <div class="flex gap-1 mb-6 border-b border-border">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          :class="[
+            'px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px',
+            activeTab === tab.key
+              ? 'text-primary border-primary'
+              : 'text-muted-foreground border-transparent hover:text-foreground',
+          ]"
+          @click="handleTabChange(tab.key)"
         >
-          <Settings class="w-4 h-4 mr-2" />
-          可视化编辑器
-        </Button>
-        <Button
-          :variant="viewMode === 'yaml' ? 'default' : 'outline'"
-          size="sm"
-          @click="viewMode = 'yaml'"
-        >
-          <FileCode class="w-4 h-4 mr-2" />
-          YAML 编辑器
-        </Button>
-      </div>
-
-      <!-- Visual Editor -->
-      <div v-if="viewMode === 'visual'" class="space-y-6">
-        <!-- Server Settings -->
-        <Section title="服务器设置">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">主机</label>
-              <Input v-model="config.host" placeholder="0.0.0.0" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">端口</label>
-              <Input v-model.number="config.port" type="number" placeholder="8080" />
-            </div>
-          </div>
-        </Section>
-
-        <!-- Feature Toggles -->
-        <Section title="功能">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CardSection class="flex items-center justify-between">
-              <div>
-                <div class="font-medium text-foreground">调试模式</div>
-                <div class="text-xs text-muted-foreground">启用详细日志</div>
-              </div>
-              <Switch v-model="config.debug" />
-            </CardSection>
-
-            <CardSection class="flex items-center justify-between">
-              <div>
-                <div class="font-medium text-foreground">用量统计</div>
-                <div class="text-xs text-muted-foreground">跟踪 API 使用情况</div>
-              </div>
-              <Switch v-model="config['usage-statistics-enabled']" />
-            </CardSection>
-
-            <CardSection class="flex items-center justify-between">
-              <div>
-                <div class="font-medium text-foreground">文件日志</div>
-                <div class="text-xs text-muted-foreground">将日志写入文件</div>
-              </div>
-              <Switch v-model="config['logging-to-file']" />
-            </CardSection>
-
-            <CardSection class="flex items-center justify-between">
-              <div>
-                <div class="font-medium text-foreground">WebSocket 认证</div>
-                <div class="text-xs text-muted-foreground">要求 WS 认证</div>
-              </div>
-              <Switch v-model="config['ws-auth']" />
-            </CardSection>
-          </div>
-        </Section>
-
-        <!-- Request Settings -->
-        <Section title="请求设置">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">重试次数</label>
-              <Input v-model.number="config['request-retry']" type="number" min="0" max="10" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">代理 URL</label>
-              <Input v-model="config['proxy-url']" placeholder="http://proxy:8080" />
-            </div>
-          </div>
-        </Section>
-      </div>
-
-      <!-- YAML Editor with CodeMirror -->
-      <CardSection v-else class="overflow-hidden">
-        <!-- Editor Toolbar -->
-        <div class="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileCode class="w-4 h-4" />
-            <span>config.yaml</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button
-              class="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              title="搜索 (Ctrl+F)"
-              @click="focusSearch"
+          <span class="flex items-center gap-2">
+            {{ tab.label }}
+            <span
+              v-if="tab.key === 'visual'"
+              class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold"
             >
-              <Search class="w-4 h-4" />
-            </button>
+              BETA
+            </span>
+          </span>
+        </button>
+      </div>
+
+      <!-- 内容区域 -->
+      <div class="flex flex-col gap-6 min-h-0 flex-1">
+        <!-- 源代码编辑模式 -->
+        <div v-if="activeTab === 'source'" class="flex flex-col gap-4 flex-1">
+          <!-- 搜索控制栏 -->
+          <div
+            class="flex items-center gap-4 p-4 bg-card border border-border rounded-lg"
+          >
+            <div class="flex-1 relative">
+              <Search
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
+              />
+              <Input
+                v-model="searchQuery"
+                placeholder="搜索配置内容..."
+                class="pl-10"
+                @keydown.enter="performSearch(searchQuery, 'next')"
+                @keydown.f3.prevent="performSearch(searchQuery, 'next')"
+                @keydown.shift.f3.prevent="performSearch(searchQuery, 'prev')"
+              />
+            </div>
+            <div
+              v-if="searchResults.total > 0"
+              class="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <span>{{ searchResults.current }}/{{ searchResults.total }}</span>
+              <div class="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="performSearch(searchQuery, 'prev')"
+                  :disabled="searchResults.total === 0"
+                >
+                  <ChevronUp class="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="performSearch(searchQuery, 'next')"
+                  :disabled="searchResults.total === 0"
+                >
+                  <ChevronDown class="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 代码编辑器 -->
+          <div class="flex-1 border border-border rounded-lg overflow-hidden">
+            <Codemirror
+              ref="editorRef"
+              v-model="content"
+              :style="{ height: '600px' }"
+              :extensions="editorExtensions"
+              :disabled="disableControls || loading"
+              @change="handleChange"
+            />
           </div>
         </div>
-        
-        <!-- CodeMirror Editor -->
-        <div class="yaml-editor-container">
-          <Codemirror
-            v-model="yamlContent"
-            :style="{ minHeight: '500px' }"
-            :extensions="extensions"
-            :autofocus="true"
-            placeholder="# 在此编辑 YAML 配置..."
+
+        <!-- 可视化编辑模式 -->
+        <div v-else-if="activeTab === 'visual'" class="space-y-6">
+          <VisualConfigEditor
+            :values="visualValues"
+            :disabled="disableControls || loading"
+            @update:values="setVisualValues"
           />
         </div>
-      </CardSection>
-    </template>
+
+        <!-- 保存按钮 -->
+        <div class="flex justify-end gap-3 pt-4 border-t border-border">
+          <Button variant="outline" @click="loadConfig" :disabled="loading">
+            <RotateCcw class="w-4 h-4 mr-2" />
+            重新加载
+          </Button>
+          <Button
+            @click="handleSave"
+            :disabled="!isDirty || saving || disableControls"
+          >
+            <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
+            <Save v-else class="w-4 h-4 mr-2" />
+            {{ saving ? '保存中...' : '保存配置' }}
+          </Button>
+        </div>
+      </div>
+    </div>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { apiClient } from '@/api/client'
-import { useToast } from '@/composables/useToast'
-import { useDarkMode } from '@/composables/useDarkMode'
-import PageContainer from '@/components/layout/PageContainer.vue'
-import PageHeader from '@/components/layout/PageHeader.vue'
-import CardSection from '@/components/layout/CardSection.vue'
-import Section from '@/components/layout/Section.vue'
-import Button from '@/components/ui/button.vue'
-import Input from '@/components/ui/input.vue'
-import Switch from '@/components/ui/switch.vue'
-import {
-  Save,
-  Settings,
-  FileCode,
-  Loader2,
-  Search,
-} from 'lucide-vue-next'
-
-// CodeMirror imports
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Codemirror } from 'vue-codemirror'
 import { yaml } from '@codemirror/lang-yaml'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
+import {
+  search,
+  searchKeymap,
+  highlightSelectionMatches,
+} from '@codemirror/search'
 import { keymap } from '@codemirror/view'
-import { EditorView } from '@codemirror/view'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { useAuthStore } from '@/stores/auth'
+import { useConfigStore } from '@/stores/config'
+import { useDarkMode } from '@/composables/useDarkMode'
+import { useToast } from '@/composables/useToast'
+import { useVisualConfig } from '@/composables/useVisualConfig'
+import { configFileApi } from '@/api/configFile'
+import PageContainer from '@/components/layout/PageContainer.vue'
+import Button from '@/components/ui/button.vue'
+import Input from '@/components/ui/input.vue'
+import VisualConfigEditor from '@/components/config/VisualConfigEditor.vue'
 
-interface Config {
-  host?: string
-  port?: number
-  debug?: boolean
-  'usage-statistics-enabled'?: boolean
-  'logging-to-file'?: boolean
-  'ws-auth'?: boolean
-  'request-retry'?: number
-  'proxy-url'?: string
-  [key: string]: any
-}
+type ConfigEditorTab = 'visual' | 'source'
 
-const { toast } = useToast()
+const authStore = useAuthStore()
+const configStore = useConfigStore()
 const { isDark } = useDarkMode()
+const { toast } = useToast()
+const {
+  visualValues,
+  visualDirty,
+  loadVisualValuesFromYaml,
+  applyVisualChangesToYaml,
+  setVisualValues,
+} = useVisualConfig()
 
+const activeTab = ref<ConfigEditorTab>('source')
+const content = ref('')
 const loading = ref(true)
 const saving = ref(false)
-const viewMode = ref<'visual' | 'yaml'>('visual')
-const config = ref<Config>({})
-const originalConfig = ref<Config>({})
-const yamlContent = ref('')
+const error = ref('')
+const dirty = ref(false)
 
-// CodeMirror extensions
-const extensions = computed(() => {
-  const baseExtensions = [
-    yaml(),
-    search(),
-    highlightSelectionMatches(),
-    keymap.of(searchKeymap),
-    EditorView.lineWrapping,
-    EditorView.theme({
-      '&': {
-        fontSize: '14px',
-      },
-      '.cm-content': {
-        padding: '16px 0',
-      },
-      '.cm-line': {
-        padding: '0 16px',
-      },
-      '.cm-gutters': {
-        backgroundColor: 'transparent',
-        border: 'none',
-        paddingRight: '8px',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: 'transparent',
-      },
-      '.cm-activeLine': {
-        backgroundColor: isDark.value ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-      },
-      '.cm-selectionBackground': {
-        backgroundColor: isDark.value ? 'rgba(204,120,92,0.3)' : 'rgba(204,120,92,0.2)',
-      },
-      '&.cm-focused .cm-selectionBackground': {
-        backgroundColor: isDark.value ? 'rgba(204,120,92,0.3)' : 'rgba(204,120,92,0.2)',
-      },
-      '.cm-cursor': {
-        borderLeftColor: isDark.value ? '#cc785c' : '#cc785c',
-      },
-    }),
-  ]
-  
-  // Add dark theme if in dark mode
-  if (isDark.value) {
-    baseExtensions.push(oneDark)
-  }
-  
-  return baseExtensions
-})
+// 搜索相关
+const searchQuery = ref('')
+const searchResults = ref({ current: 0, total: 0 })
+const editorRef = ref()
 
-const hasChanges = computed(() => {
-  return JSON.stringify(config.value) !== JSON.stringify(originalConfig.value)
-})
+const disableControls = computed(() => !authStore.isConnected)
+const isDirty = computed(() =>
+  activeTab.value === 'visual' ? visualDirty.value : dirty.value
+)
 
-async function fetchConfig() {
+const tabs = [
+  { key: 'source' as const, label: '源代码编辑' },
+  { key: 'visual' as const, label: '可视化编辑' },
+]
+
+// CodeMirror 扩展
+const editorExtensions = computed(() => [
+  yaml(),
+  search({ top: true }),
+  highlightSelectionMatches(),
+  keymap.of(searchKeymap),
+  ...(isDark.value ? [oneDark] : []),
+])
+
+// 加载配置
+const loadConfig = async () => {
   loading.value = true
+  error.value = ''
   try {
-    const data = await apiClient.get<Config>('/config')
-    config.value = { ...data }
-    originalConfig.value = { ...data }
-    yamlContent.value = configToYaml(data)
-  } catch {
-    toast({ title: '加载配置失败', variant: 'destructive' })
+    // 只从 YAML 文件加载配置
+    const yamlData = await configFileApi.fetchConfigYaml()
+
+    content.value = yamlData
+    dirty.value = false
+
+    // 直接从 YAML 数据加载到可视化编辑器
+    loadVisualValuesFromYaml(yamlData)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '刷新失败'
+    error.value = message
+    toast({
+      title: '加载配置失败',
+      description: message,
+      variant: 'destructive',
+    })
   } finally {
     loading.value = false
   }
 }
 
-function configToYaml(obj: Config): string {
-  const lines: string[] = []
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === undefined || value === null) continue
-    if (typeof value === 'object') {
-      lines.push(`${key}:`)
-      for (const [k, v] of Object.entries(value)) {
-        lines.push(`  ${k}: ${JSON.stringify(v)}`)
-      }
-    } else {
-      lines.push(`${key}: ${JSON.stringify(value)}`)
-    }
-  }
-  return lines.join('\n')
-}
-
-function resetConfig() {
-  config.value = { ...originalConfig.value }
-  yamlContent.value = configToYaml(originalConfig.value)
-}
-
-async function saveConfig() {
+// 保存配置
+const handleSave = async () => {
   saving.value = true
   try {
-    // Backend expects YAML format via PUT /config.yaml
-    const yamlToSave = viewMode.value === 'yaml' ? yamlContent.value : configToYaml(config.value)
-    await apiClient.put('/config.yaml', yamlToSave, {
-      headers: { 'Content-Type': 'text/plain' }
+    const nextContent =
+      activeTab.value === 'visual'
+        ? applyVisualChangesToYaml(content.value)
+        : content.value
+    await configFileApi.saveConfigYaml(nextContent)
+
+    if (activeTab.value === 'visual') {
+      content.value = nextContent
+      // 保存后重新从YAML内容加载到可视化编辑器
+      loadVisualValuesFromYaml(nextContent)
+    }
+
+    dirty.value = false
+    toast({ title: '配置保存成功' })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : ''
+    toast({
+      title: '保存失败',
+      description: message,
+      variant: 'destructive',
     })
-    originalConfig.value = { ...config.value }
-    toast({ title: '配置已保存' })
-  } catch {
-    toast({ title: '保存配置失败', variant: 'destructive' })
   } finally {
     saving.value = false
   }
 }
 
-function focusSearch() {
-  // Trigger search panel - this opens the CodeMirror search dialog
-  const editor = document.querySelector('.cm-content') as HTMLElement
-  if (editor) {
-    editor.focus()
-    // Dispatch Ctrl+F event to open search
-    const event = new KeyboardEvent('keydown', {
-      key: 'f',
-      ctrlKey: true,
-      bubbles: true,
-    })
-    editor.dispatchEvent(event)
+// 处理内容变化
+const handleChange = (value: string) => {
+  content.value = value
+  dirty.value = true
+}
+
+// 处理标签页切换
+const handleTabChange = (tab: ConfigEditorTab) => {
+  if (tab === activeTab.value) return
+
+  if (tab === 'source') {
+    const nextContent = applyVisualChangesToYaml(content.value)
+    if (nextContent !== content.value) {
+      content.value = nextContent
+      dirty.value = true
+    }
+  } else {
+    // 切换到可视化编辑时，从当前YAML内容加载
+    loadVisualValuesFromYaml(content.value)
+  }
+
+  activeTab.value = tab
+}
+
+// 搜索功能
+const performSearch = async (
+  query: string,
+  direction: 'next' | 'prev' = 'next'
+) => {
+  if (!query || !editorRef.value?.view) return
+
+  await nextTick()
+
+  const view = editorRef.value.view
+  const doc = view.state.doc.toString()
+  const matches: number[] = []
+  const lowerQuery = query.toLowerCase()
+  const lowerDoc = doc.toLowerCase()
+
+  let pos = 0
+  while (pos < lowerDoc.length) {
+    const index = lowerDoc.indexOf(lowerQuery, pos)
+    if (index === -1) break
+    matches.push(index)
+    pos = index + 1
+  }
+
+  if (matches.length === 0) {
+    searchResults.value = { current: 0, total: 0 }
+    return
+  }
+
+  // 找到当前匹配项
+  const currentPos = view.state.selection.main.head
+  let currentIndex = matches.findIndex((pos) => pos >= currentPos)
+
+  if (currentIndex === -1) {
+    currentIndex = direction === 'next' ? 0 : matches.length - 1
+  } else if (direction === 'prev') {
+    currentIndex = currentIndex > 0 ? currentIndex - 1 : matches.length - 1
+  } else if (direction === 'next' && matches[currentIndex] === currentPos) {
+    currentIndex = currentIndex < matches.length - 1 ? currentIndex + 1 : 0
+  }
+
+  const targetPos = matches[currentIndex]
+  view.dispatch({
+    selection: { anchor: targetPos, head: targetPos + query.length },
+    scrollIntoView: true,
+  })
+
+  searchResults.value = {
+    current: currentIndex + 1,
+    total: matches.length,
   }
 }
 
-// Sync visual editor changes to YAML
-watch(config, (newConfig) => {
-  if (viewMode.value === 'visual') {
-    yamlContent.value = configToYaml(newConfig)
-  }
-}, { deep: true })
-
-onMounted(fetchConfig)
+onMounted(() => {
+  loadConfig()
+})
 </script>
 
-<style>
-/* CodeMirror editor styling */
-.yaml-editor-container .cm-editor {
-  background-color: transparent;
+<style scoped>
+.config-page {
+  @apply flex flex-col h-full;
 }
 
-.yaml-editor-container .cm-scroller {
-  min-height: 500px;
+:deep(.cm-editor) {
+  @apply text-sm;
 }
 
-/* Light mode styles */
-:root:not(.dark) .yaml-editor-container .cm-editor {
-  background-color: #fafaf9;
-}
-
-:root:not(.dark) .yaml-editor-container .cm-gutters {
-  background-color: #f5f5f4;
-  color: #a3a3a3;
-}
-
-/* Dark mode styles */
-.dark .yaml-editor-container .cm-editor {
-  background-color: #1a1a1a;
-}
-
-.dark .yaml-editor-container .cm-gutters {
-  background-color: #1f1f1f;
-  color: #6b6b6b;
-}
-
-/* Search panel styling */
-.cm-panel.cm-search {
-  background-color: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 8px;
-}
-
-.cm-panel.cm-search input {
-  background-color: var(--input);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: var(--foreground);
-}
-
-.cm-panel.cm-search button {
-  background-color: var(--secondary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: var(--foreground);
-  cursor: pointer;
-}
-
-.cm-panel.cm-search button:hover {
-  background-color: var(--accent);
+:deep(.cm-focused) {
+  @apply outline-none;
 }
 </style>
