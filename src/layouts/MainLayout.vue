@@ -32,7 +32,7 @@
       <!-- HEADER (Brand) -->
       <div class="shrink-0 flex items-center px-6 h-20">
         <RouterLink
-          to="/app/dashboard"
+          to="/dashboard"
           class="flex items-center gap-3 group transition-opacity hover:opacity-80"
         >
           <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -78,7 +78,7 @@
 
           <div class="flex items-center gap-1">
             <RouterLink
-              to="/app/settings"
+              to="/settings"
               class="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
               title="设置"
             >
@@ -103,7 +103,7 @@
           <div class="flex items-center justify-between">
             <!-- Logo & Brand -->
             <RouterLink
-              to="/app/dashboard"
+              to="/dashboard"
               class="flex items-center gap-3 group"
             >
               <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -235,7 +235,7 @@
                   </div>
                   <div class="flex items-center gap-1">
                     <RouterLink
-                      to="/app/settings"
+                      to="/settings"
                       class="p-2 hover:bg-muted/50 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                       @click="mobileMenuOpen = false"
                     >
@@ -315,7 +315,7 @@ watch(() => route.path, () => {
 
 onMounted(() => {
   authCheckInterval = window.setInterval(() => {
-    if (!authStore.isConnected && route.path.startsWith('/app')) {
+    if (!authStore.isConnected && route.path !== '/login') {
       showAuthError.value = true
     }
   }, 5000)
@@ -339,7 +339,7 @@ function handleDisconnect() {
 }
 
 function isNavActive(href: string) {
-  if (href === '/app/dashboard') {
+  if (href === '/dashboard') {
     return route.path === href
   }
   return route.path === href || route.path.startsWith(`${href}/`)
@@ -350,31 +350,31 @@ const navigation = computed(() => [
   {
     title: '概览',
     items: [
-      { name: '仪表盘', href: '/app/dashboard', icon: Home },
+      { name: '仪表盘', href: '/dashboard', icon: Home },
     ]
   },
   {
     title: '资源',
     items: [
-      { name: 'API 密钥', href: '/app/api-keys', icon: Key },
-      { name: 'AI 提供商', href: '/app/ai-providers', icon: Bot },
-      { name: '认证文件', href: '/app/auth-files', icon: FileText },
-      { name: 'OAuth', href: '/app/oauth', icon: Fingerprint },
+      { name: 'API 密钥', href: '/api-keys', icon: Key },
+      { name: 'AI 提供商', href: '/ai-providers', icon: Bot },
+      { name: '认证文件', href: '/auth-files', icon: FileText },
+      { name: 'OAuth', href: '/oauth', icon: Fingerprint },
     ]
   },
   {
     title: '统计',
     items: [
-      { name: '使用记录', href: '/app/usage', icon: BarChart3 },
-      { name: '日志', href: '/app/logs', icon: ScrollText },
+      { name: '使用记录', href: '/usage', icon: BarChart3 },
+      { name: '日志', href: '/logs', icon: ScrollText },
     ]
   },
   {
     title: '系统',
     items: [
-      { name: '配置', href: '/app/config', icon: FileCode },
-      { name: '备份', href: '/app/backup', icon: Archive },
-      { name: '设置', href: '/app/settings', icon: Settings },
+      { name: '配置', href: '/config', icon: FileCode },
+      { name: '备份', href: '/backup', icon: Archive },
+      { name: '设置', href: '/settings', icon: Settings },
     ]
   }
 ])

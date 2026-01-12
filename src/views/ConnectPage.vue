@@ -227,7 +227,7 @@ onMounted(async () => {
     autoConnecting.value = false
 
     if (success) {
-      const redirect = (route.query.redirect as string) || '/app/dashboard'
+      const redirect = (route.query.redirect as string) || '/dashboard'
       router.push(redirect)
     }
   }
@@ -251,7 +251,7 @@ async function handleConnect() {
     })
 
     if (success) {
-      const redirect = (route.query.redirect as string) || '/app/dashboard'
+      const redirect = (route.query.redirect as string) || '/dashboard'
       router.push(redirect)
     } else {
       error.value = authStore.connectionError || '连接失败'

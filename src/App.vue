@@ -52,12 +52,12 @@ onMounted(async () => {
     
     const currentPath = router.currentRoute.value.path
     
-    if (autoConnectSuccess && currentPath === '/') {
+    if (autoConnectSuccess && currentPath === '/login') {
       // Auto-connect succeeded, go to dashboard
-      await router.replace('/app/dashboard')
-    } else if (!autoConnectSuccess && currentPath.startsWith('/app')) {
+      await router.replace('/dashboard')
+    } else if (!autoConnectSuccess && currentPath !== '/login') {
       // Auto-connect failed but trying to access protected route, go to connect page
-      await router.replace('/')
+      await router.replace('/login')
     }
     // Otherwise, stay on current route
   }, SPLASH_DURATION + 50)

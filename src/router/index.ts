@@ -5,21 +5,21 @@ import { useAuthStore } from '@/stores/auth'
 const routes: RouteRecordRaw[] = [
   // 登录/连接页面
   {
-    path: '/',
+    path: '/login',
     name: 'Connect',
     component: () => import('@/views/ConnectPage.vue'),
     meta: { requiresAuth: false }
   },
 
-  // 主应用路由
+  // 主应用路由 - 直接在根路径下
   {
-    path: '/app',
+    path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
       {
         path: '',
-        redirect: '/app/dashboard'
+        redirect: '/dashboard'
       },
       {
         path: 'dashboard',
