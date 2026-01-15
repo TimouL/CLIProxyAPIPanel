@@ -57,20 +57,19 @@
       </div>
     </div>
 
-    <!-- Status Bar (Request History Simulation) -->
-    <!-- Ideally this would come from props, but for now just visual placeholder or stats if available -->
+    <!-- Status Bar (Request Activity from Stats) -->
     <div v-if="hasStats" class="mb-4 space-y-2">
        <div class="flex items-center justify-between text-xs">
          <span class="text-muted-foreground">最近活动</span>
-         <span class="font-medium" :class="successRateColor">{{ successRate }}% 成功率</span>
+         <span class="font-medium" :class="successRateColor">{{ successRateDisplay }}</span>
        </div>
        <div class="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted/30">
-         <div v-for="(stat, i) in recentStats" :key="i" 
-              class="h-full flex-1 rounded-sm"
+         <div v-for="(stat, i) in statusBarBlocks" :key="i" 
+              class="h-full flex-1 rounded-sm transition-colors duration-300"
               :class="{
                 'bg-green-500': stat === 'success',
-                'bg-red-500': stat === 'error',
-                'bg-yellow-500': stat === 'warning',
+                'bg-red-500': stat === 'failure',
+                'bg-yellow-500': stat === 'mixed',
                 'bg-gray-200 dark:bg-gray-700': stat === 'idle'
               }"
          ></div>
@@ -78,8 +77,8 @@
     </div>
 
     <!-- Quota Section -->
-    <div v-if="showQuota" class="mt-auto pt-4 border-t border-border/50">
-      <div class="flex items-center justify-between mb-2">
+    <div v-if="showQuota" class="flex-1 flex flex-col pt-4 border-t border-border/50 mt-4">
+      <div class="flex items-center justify-between mb-4">
         <span class="text-xs font-medium text-muted-foreground">配额使用情况</span>
         <Button 
           variant="ghost" 
@@ -95,8 +94,10 @@
       </div>
 
       <!-- Error State -->
-      <div v-if="quotaState?.status === 'error'" class="rounded bg-red-50 dark:bg-red-900/20 p-2 text-xs text-red-600 dark:text-red-400">
-        {{ quotaState.error || '配额加载失败' }}
+      <div v-if="quotaState?.status === 'error'" class="flex-1 flex items-center justify-center">
+        <div class="w-full rounded bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-600 dark:text-red-400 text-center">
+          {{ quotaState.error || '配额加载失败' }}
+        </div>
       </div>
 
       <!-- Antigravity Quota -->
@@ -165,7 +166,7 @@
       </div>
 
       <!-- Default / Idle State -->
-      <div v-else-if="!loading && quotaState?.status === 'idle'" class="text-xs text-muted-foreground text-center py-2">
+      <div v-else-if="!loading && quotaState?.status === 'idle'" class="flex-1 flex items-center justify-center text-xs text-muted-foreground py-8">
         点击刷新加载配额
       </div>
     </div>
@@ -179,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, defineEmits, inject, watch, type Ref } from 'vue'
+import { computed, defineProps, defineEmits, inject, watch, onMounted, type Ref } from 'vue'
 import { 
   FileJson, 
   Download, 
@@ -196,6 +197,7 @@ import Button from '@/components/ui/button.vue'
 import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
 import { TYPE_COLORS, formatQuotaResetTime } from '@/utils/quota'
 import { useQuota } from '@/composables/useQuota'
+import { useAuthStatsStore } from '@/stores/authStats'
 import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
 
 const props = defineProps<{
@@ -289,13 +291,73 @@ const getIconForType = (type?: string) => {
   }
 }
 
-// Stats (Mocked for now as AuthFileItem doesn't strictly have this yet)
-const hasStats = computed(() => {
-  return false // Enable when backend supports stats on file list
+// Stats from authStats store
+const authStatsStore = useAuthStatsStore()
+
+// 获取 authIndex（兼容两种命名方式）
+const authIndexKey = computed(() => {
+  const rawAuthIndex = props.file.authIndex ?? (props.file as Record<string, unknown>)['auth_index']
+  return authStatsStore.normalizeAuthIndex(rawAuthIndex)
 })
-const successRate = 98
-const successRateColor = 'text-green-500'
-const recentStats = ['success', 'success', 'success', 'success', 'warning', 'success', 'error', 'success', 'success', 'success']
+
+// 获取统计数据
+const fileStats = computed(() => {
+  // 首先通过 authIndex 匹配
+  if (authIndexKey.value) {
+    const stats = authStatsStore.getStatsByAuthIndex(authIndexKey.value)
+    if (stats.success > 0 || stats.failure > 0) {
+      return stats
+    }
+  }
+  // 然后通过 source (文件名) 匹配
+  return authStatsStore.getStatsBySource(props.file.name)
+})
+
+// 获取状态栏数据
+const statusBarData = computed(() => {
+  if (authIndexKey.value) {
+    return authStatsStore.getStatusBarData(authIndexKey.value)
+  }
+  return {
+    blocks: new Array(20).fill('idle'),
+    successRate: 100,
+    totalSuccess: 0,
+    totalFailure: 0
+  }
+})
+
+// 是否显示统计栏（加载完成后始终显示，没有数据时显示全灰色）
+const hasStats = computed(() => {
+  return authStatsStore.loaded
+})
+
+// 统计数据详细显示
+const successRateDisplay = computed(() => {
+  const success = fileStats.value.success
+  const failure = fileStats.value.failure
+  const total = success + failure
+  if (total === 0) return '--'
+  const rate = (success / total) * 100
+  return `成功: ${success} | 失败: ${failure} | ${rate.toFixed(1)}%`
+})
+
+// 成功率颜色
+const successRateColor = computed(() => {
+  const total = fileStats.value.success + fileStats.value.failure
+  if (total === 0) return 'text-muted-foreground'
+  const rate = (fileStats.value.success / total) * 100
+  if (rate >= 90) return 'text-green-500'
+  if (rate >= 50) return 'text-yellow-500'
+  return 'text-red-500'
+})
+
+// 状态栏块数据
+const statusBarBlocks = computed(() => statusBarData.value.blocks)
+
+// 组件挂载时加载统计数据
+onMounted(() => {
+  authStatsStore.loadStats()
+})
 
 // Quota visibility
 const showQuota = computed(() => {

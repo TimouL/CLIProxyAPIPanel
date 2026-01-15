@@ -233,6 +233,7 @@ import { apiClient } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useClipboard } from '@/composables/useClipboard'
 import { useQuotaStore } from '@/stores/quota'
+import { useAuthStatsStore } from '@/stores/authStats'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
@@ -252,6 +253,7 @@ import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
 const { toast } = useToast()
 const { copy } = useClipboard()
 const quotaStore = useQuotaStore()
+const authStatsStore = useAuthStatsStore()
 
 const loading = ref(true)
 const files = ref<AuthFileItem[]>([])
@@ -489,5 +491,8 @@ function formatDate(dateValue?: number | string): string {
   return formatDateOnly(dateValue) || ''
 }
 
-onMounted(fetchFiles)
+onMounted(() => {
+  fetchFiles()
+  authStatsStore.loadStats()
+})
 </script>
