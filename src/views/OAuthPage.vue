@@ -35,6 +35,63 @@
       </div>
     </Section>
 
+    <Section title="iFlow Cookie 授权" class="mb-8">
+      <CardSection>
+        <div class="flex flex-col gap-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Cloud class="w-5 h-5 text-primary" />
+            </div>
+            <div class="flex-1">
+              <div class="font-medium text-foreground">iFlow</div>
+              <div class="text-xs text-muted-foreground">
+                点击开始授权后展开输入框，粘贴 Cookie 完成授权（无需打开授权链接）
+              </div>
+            </div>
+          </div>
+ 
+          <div class="flex gap-2">
+            <Button size="sm" class="w-full" @click="toggleIflowCookie" :disabled="iflowCookieSubmitting">
+              <Loader2 v-if="iflowCookieSubmitting" class="w-4 h-4 mr-2 animate-spin" />
+              <ExternalLink v-else class="w-4 h-4 mr-2" />
+              {{ iflowCookieExpanded ? '收起' : '开始授权' }}
+            </Button>
+          </div>
+ 
+          <div v-if="iflowCookieExpanded" class="space-y-3">
+            <div>
+              <label class="text-sm font-medium text-foreground mb-1 block">Cookie 内容</label>
+              <div class="text-xs text-muted-foreground mb-2">从浏览器复制完整 Cookie（需包含 BXAuth=...）</div>
+              <Textarea
+                v-model="iflowCookieValue"
+                placeholder="粘贴浏览器中的 Cookie，例如 BXAuth=...;"
+                class="min-h-[120px]"
+                :disabled="iflowCookieSubmitting"
+              />
+            </div>
+ 
+            <div class="flex gap-2">
+              <Button size="sm" @click="submitIflowCookie" :disabled="iflowCookieSubmitting || !iflowCookieValue.trim()">
+                <Loader2 v-if="iflowCookieSubmitting" class="w-4 h-4 mr-2 animate-spin" />
+                提交 Cookie 授权
+              </Button>
+              <Button variant="outline" size="sm" @click="clearIflowCookieResult" :disabled="iflowCookieSubmitting">
+                清空结果
+              </Button>
+            </div>
+ 
+            <div v-if="iflowCookieResult" class="p-3 bg-muted/30 rounded-lg space-y-1">
+              <div class="text-sm text-foreground">授权成功</div>
+              <div class="text-xs text-muted-foreground">账号：<span class="font-mono">{{ iflowCookieResult.email }}</span></div>
+              <div class="text-xs text-muted-foreground">过期时间：<span class="font-mono">{{ iflowCookieResult.expired }}</span></div>
+              <div class="text-xs text-muted-foreground">保存路径：<span class="font-mono break-all">{{ iflowCookieResult.saved_path }}</span></div>
+              <div v-if="iflowCookieResult.replaced" class="text-xs text-muted-foreground">已覆盖旧凭证</div>
+            </div>
+          </div>
+        </div>
+      </CardSection>
+    </Section>
+ 
     <!-- Active Auth Flow -->
     <Section v-if="activeFlow" title="认证进行中">
       <CardSection>
@@ -193,6 +250,7 @@ import CardSection from '@/components/layout/CardSection.vue'
 import Section from '@/components/layout/Section.vue'
 import Button from '@/components/ui/button.vue'
 import Input from '@/components/ui/input.vue'
+import Textarea from '@/components/ui/textarea.vue'
 import {
   Bot,
   Sparkles,
@@ -248,6 +306,19 @@ const authStatus = ref<Record<string, AuthStatusItem>>({})
 const geminiProjectId = ref('')
 let pollingTimer: number | null = null
 
+interface IFlowCookieResult {
+  saved_path: string
+  email: string
+  expired: string
+  type: string
+  replaced?: boolean
+}
+ 
+const iflowCookieExpanded = ref(false)
+const iflowCookieValue = ref('')
+const iflowCookieSubmitting = ref(false)
+const iflowCookieResult = ref<IFlowCookieResult | null>(null)
+ 
 // 支持回调的提供商
 const CALLBACK_SUPPORTED = ['codex', 'anthropic', 'antigravity', 'gemini']
 // 回调接口的提供商名称映射
@@ -296,14 +367,6 @@ const providers: OAuthProvider[] = [
     icon: markRaw(Cpu),
     supportsCallback: false,
   },
-  {
-    id: 'iflow',
-    name: 'iFlow',
-    description: 'iFlow AI 服务',
-    endpoint: '/iflow-auth-url',
-    icon: markRaw(Cloud),
-    supportsCallback: false,
-  },
 ]
 
 async function copyCode(code: string) {
@@ -320,6 +383,36 @@ function openUrl(url: string) {
   window.open(url, '_blank')
 }
 
+function toggleIflowCookie() {
+  iflowCookieExpanded.value = !iflowCookieExpanded.value
+}
+ 
+function clearIflowCookieResult() {
+  iflowCookieResult.value = null
+}
+ 
+async function submitIflowCookie() {
+  if (iflowCookieSubmitting.value) return
+  const cookie = iflowCookieValue.value.trim()
+  if (!cookie) {
+    toast({ title: '请先填写 Cookie 内容', variant: 'destructive' })
+    return
+  }
+ 
+  iflowCookieSubmitting.value = true
+  try {
+    const res = await apiClient.post<IFlowCookieResult & { status?: string }>('/iflow-auth-url', { cookie })
+    iflowCookieResult.value = res
+    toast({ title: res?.replaced ? '授权成功，已覆盖旧凭证' : '授权成功' })
+    fetchAuthStatus()
+  } catch (err: unknown) {
+    const error = err as { message?: string }
+    toast({ title: error?.message || '授权失败', variant: 'destructive' })
+  } finally {
+    iflowCookieSubmitting.value = false
+  }
+}
+ 
 function stopPolling() {
   if (pollingTimer !== null) {
     window.clearInterval(pollingTimer)
@@ -395,9 +488,7 @@ async function startAuth(provider: OAuthProvider) {
       if (data?.state) {
         startPolling(data.state)
       }
-      // Auto-open in browser
-      window.open(url, '_blank')
-      toast({ title: `${provider.name} 认证已启动` })
+      toast({ title: `${provider.name} 认证已启动，请手动打开或复制链接完成认证` })
     } else {
       toast({ title: '获取认证链接失败', variant: 'destructive' })
     }
