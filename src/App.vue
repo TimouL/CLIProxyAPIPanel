@@ -5,6 +5,7 @@
     :on-finish="handleSplashFinish"
   />
   <RouterView v-else />
+  <ToastHost />
 </template>
 
 <script setup lang="ts">
@@ -12,6 +13,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import SplashScreen from '@/components/common/SplashScreen.vue'
+import ToastHost from '@/components/common/ToastHost.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -134,6 +134,7 @@ import {
 } from '@codemirror/search'
 import { keymap } from '@codemirror/view'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { ChevronDown, ChevronUp, Loader2, RotateCcw, Save, Search } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useConfigStore } from '@/stores/config'
 import { useDarkMode } from '@/composables/useDarkMode'
@@ -233,7 +234,7 @@ const handleSave = async () => {
     }
 
     dirty.value = false
-    toast({ title: '配置保存成功' })
+    toast({ title: '保存成功', description: '配置已写入 config.yaml', variant: 'success' })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : ''
     toast({
