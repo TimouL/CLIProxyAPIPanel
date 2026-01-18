@@ -128,6 +128,36 @@ debug: false
     expect(updatedYaml).toContain('nonstream-keepalive-interval: 20')
   })
 
+  it('should persist turning debug off (true -> false)', () => {
+    const { loadVisualValuesFromYaml, applyVisualChangesToYaml, setVisualValues } = useVisualConfig()
+
+    const originalYaml = `
+debug: true
+`
+
+    loadVisualValuesFromYaml(originalYaml)
+    setVisualValues({ debug: false })
+
+    const updatedYaml = applyVisualChangesToYaml(originalYaml)
+    expect(updatedYaml).toContain('debug: false')
+    expect(updatedYaml).not.toContain('debug: true')
+  })
+
+  it('should migrate legacy remote-management panel-repo key on save', () => {
+    const { loadVisualValuesFromYaml, applyVisualChangesToYaml } = useVisualConfig()
+
+    const originalYaml = `
+remote-management:
+  panel-repo: "https://github.com/example/legacy"
+`
+
+    loadVisualValuesFromYaml(originalYaml)
+    const updatedYaml = applyVisualChangesToYaml(originalYaml)
+
+    expect(updatedYaml).toContain('panel-github-repository: https://github.com/example/legacy')
+    expect(updatedYaml).not.toContain('panel-repo')
+  })
+
   it('should handle OAuth excluded models configuration', () => {
     const { loadVisualValuesFromYaml, visualValues } = useVisualConfig()
     

@@ -65,13 +65,79 @@ const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   oauthExcludedModels: {},
 }
 
+function hasOwn(obj: unknown, key: string): obj is Record<string, unknown> {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    Object.prototype.hasOwnProperty.call(obj, key)
+  )
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+function ensureRecord(parent: Record<string, unknown>, key: string): Record<string, unknown> {
+  const existing = asRecord(parent[key])
+  if (existing) return existing
+  const next: Record<string, unknown> = {}
+  parent[key] = next
+  return next
+}
+
+function deleteIfEmpty(parent: Record<string, unknown>, key: string): void {
+  const value = asRecord(parent[key])
+  if (!value) return
+  if (Object.keys(value).length === 0) delete parent[key]
+}
+
+function setBoolean(obj: Record<string, unknown>, key: string, value: boolean): void {
+  if (value) {
+    obj[key] = true
+    return
+  }
+  if (hasOwn(obj, key)) obj[key] = false
+}
+
+function setString(obj: Record<string, unknown>, key: string, value: unknown): void {
+  const safe = typeof value === 'string' ? value : ''
+  const trimmed = safe.trim()
+  if (trimmed !== '') {
+    obj[key] = safe
+    return
+  }
+  if (hasOwn(obj, key)) delete obj[key]
+}
+
+function setIntFromString(obj: Record<string, unknown>, key: string, value: unknown): void {
+  const safe = typeof value === 'string' ? value : ''
+  const trimmed = safe.trim()
+  if (trimmed === '') {
+    if (hasOwn(obj, key)) delete obj[key]
+    return
+  }
+  const parsed = Number.parseInt(trimmed, 10)
+  if (Number.isFinite(parsed)) {
+    obj[key] = parsed
+    return
+  }
+  if (hasOwn(obj, key)) delete obj[key]
+}
+
+function deepClone<T>(value: T): T {
+  if (typeof structuredClone === 'function') return structuredClone(value)
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export function useVisualConfig() {
   const visualValues = ref<VisualConfigValues>({ ...DEFAULT_VISUAL_VALUES })
   const originalYaml = ref('')
+  const baselineValues = ref<VisualConfigValues>({ ...DEFAULT_VISUAL_VALUES })
   
   const visualDirty = computed(() => {
-    // 简单的脏检查 - 比较当前值与默认值
-    return JSON.stringify(visualValues.value) !== JSON.stringify(DEFAULT_VISUAL_VALUES)
+    // 脏检查：比较当前值与最后一次从 YAML 加载的基线值
+    return JSON.stringify(visualValues.value) !== JSON.stringify(baselineValues.value)
   })
 
   /**
@@ -98,7 +164,7 @@ export function useVisualConfig() {
         rmAllowRemote: Boolean(parsed['remote-management']?.['allow-remote']),
         rmSecretKey: parsed['remote-management']?.['secret-key'] || '',
         rmDisableControlPanel: Boolean(parsed['remote-management']?.['disable-control-panel']),
-        rmPanelRepo: parsed['remote-management']?.['panel-github-repository'] || '',
+        rmPanelRepo: parsed['remote-management']?.['panel-github-repository'] || parsed['remote-management']?.['panel-repo'] || '',
         
         // 认证配置
         authDir: parsed['auth-dir'] || '',
@@ -172,9 +238,11 @@ export function useVisualConfig() {
       }
       
       visualValues.value = newValues
+      baselineValues.value = deepClone(newValues)
     } catch (error) {
       // 如果 YAML 解析失败，使用默认值
       visualValues.value = { ...DEFAULT_VISUAL_VALUES }
+      baselineValues.value = deepClone(DEFAULT_VISUAL_VALUES)
     }
   }
 
@@ -184,124 +252,164 @@ export function useVisualConfig() {
    */
   const applyVisualChangesToYaml = (currentYaml: string): string => {
     try {
-      const parsed = parseYaml(currentYaml) || {}
+      const parsed = (parseYaml(currentYaml) || {}) as Record<string, unknown>
       const values = visualValues.value
 
       // 应用基础配置
-      if (values.host) parsed.host = values.host
-      if (values.port) parsed.port = parseInt(values.port, 10) || undefined
+      setString(parsed, 'host', values.host)
+      setIntFromString(parsed, 'port', values.port)
       
       // TLS 配置
-      if (values.tlsEnable || values.tlsCert || values.tlsKey) {
-        parsed.tls = parsed.tls || {}
-        if (values.tlsEnable) parsed.tls.enable = true
-        if (values.tlsCert) parsed.tls.cert = values.tlsCert
-        if (values.tlsKey) parsed.tls.key = values.tlsKey
+      if (hasOwn(parsed, 'tls') || values.tlsEnable || values.tlsCert.trim() || values.tlsKey.trim()) {
+        const tls = ensureRecord(parsed, 'tls')
+        setBoolean(tls, 'enable', values.tlsEnable)
+        setString(tls, 'cert', values.tlsCert)
+        setString(tls, 'key', values.tlsKey)
+        deleteIfEmpty(parsed, 'tls')
       }
 
       // 远程管理配置
-      if (values.rmAllowRemote || values.rmSecretKey || values.rmDisableControlPanel || values.rmPanelRepo) {
-        parsed['remote-management'] = parsed['remote-management'] || {}
-        if (values.rmAllowRemote) parsed['remote-management']['allow-remote'] = true
-        if (values.rmSecretKey) parsed['remote-management']['secret-key'] = values.rmSecretKey
-        if (values.rmDisableControlPanel) parsed['remote-management']['disable-control-panel'] = true
-        if (values.rmPanelRepo) parsed['remote-management']['panel-repo'] = values.rmPanelRepo
+      if (
+        hasOwn(parsed, 'remote-management') ||
+        values.rmAllowRemote ||
+        values.rmSecretKey.trim() ||
+        values.rmDisableControlPanel ||
+        values.rmPanelRepo.trim()
+      ) {
+        const rm = ensureRecord(parsed, 'remote-management')
+        setBoolean(rm, 'allow-remote', values.rmAllowRemote)
+        setString(rm, 'secret-key', values.rmSecretKey)
+        setBoolean(rm, 'disable-control-panel', values.rmDisableControlPanel)
+        setString(rm, 'panel-github-repository', values.rmPanelRepo)
+        if (hasOwn(rm, 'panel-repo')) delete rm['panel-repo']
+        deleteIfEmpty(parsed, 'remote-management')
       }
 
       // 其他配置
-      if (values.authDir) parsed['auth-dir'] = values.authDir
-      if (values.apiKeysText) {
-        parsed['api-keys'] = values.apiKeysText.split('\n').filter(key => key.trim())
+      setString(parsed, 'auth-dir', values.authDir)
+      const apiKeys = values.apiKeysText
+        .split('\n')
+        .map((key) => key.trim())
+        .filter(Boolean)
+      if (apiKeys.length > 0) {
+        parsed['api-keys'] = apiKeys
+      } else if (hasOwn(parsed, 'api-keys')) {
+        delete parsed['api-keys']
       }
-      if (values.debug) parsed.debug = true
-      if (values.commercialMode) parsed['commercial-mode'] = true
-      if (values.loggingToFile) parsed['logging-to-file'] = true
-      if (values.logsMaxTotalSizeMb) {
-        parsed['logs-max-total-size-mb'] = parseInt(values.logsMaxTotalSizeMb, 10) || undefined
-      }
-      if (values.usageStatisticsEnabled) parsed['usage-statistics-enabled'] = true
-      if (values.proxyUrl) parsed['proxy-url'] = values.proxyUrl
-      if (values.forceModelPrefix) parsed['force-model-prefix'] = true
-      if (values.requestRetry) parsed['request-retry'] = parseInt(values.requestRetry, 10) || undefined
-      if (values.maxRetryInterval) parsed['max-retry-interval'] = parseInt(values.maxRetryInterval, 10) || undefined
-      if (values.wsAuth) parsed['ws-auth'] = true
+
+      setBoolean(parsed, 'debug', values.debug)
+      setBoolean(parsed, 'commercial-mode', values.commercialMode)
+      setBoolean(parsed, 'logging-to-file', values.loggingToFile)
+      setIntFromString(parsed, 'logs-max-total-size-mb', values.logsMaxTotalSizeMb)
+      setBoolean(parsed, 'usage-statistics-enabled', values.usageStatisticsEnabled)
+      setString(parsed, 'proxy-url', values.proxyUrl)
+      setBoolean(parsed, 'force-model-prefix', values.forceModelPrefix)
+      setIntFromString(parsed, 'request-retry', values.requestRetry)
+      setIntFromString(parsed, 'max-retry-interval', values.maxRetryInterval)
+      setBoolean(parsed, 'ws-auth', values.wsAuth)
 
       // 配额回退配置
-      if (!values.quotaSwitchProject || !values.quotaSwitchPreviewModel) {
-        parsed['quota-exceeded'] = parsed['quota-exceeded'] || {}
-        parsed['quota-exceeded']['switch-project'] = values.quotaSwitchProject
-        parsed['quota-exceeded']['switch-preview-model'] = values.quotaSwitchPreviewModel
+      if (hasOwn(parsed, 'quota-exceeded') || !values.quotaSwitchProject || !values.quotaSwitchPreviewModel) {
+        const quota = ensureRecord(parsed, 'quota-exceeded')
+        quota['switch-project'] = values.quotaSwitchProject
+        quota['switch-preview-model'] = values.quotaSwitchPreviewModel
+        deleteIfEmpty(parsed, 'quota-exceeded')
       }
 
       // 路由策略
-      if (values.routingStrategy !== 'round-robin') {
-        parsed.routing = parsed.routing || {}
-        parsed.routing.strategy = values.routingStrategy
+      if (hasOwn(parsed, 'routing') || values.routingStrategy !== 'round-robin') {
+        const routing = ensureRecord(parsed, 'routing')
+        routing.strategy = values.routingStrategy
+        deleteIfEmpty(parsed, 'routing')
       }
 
       // Streaming 配置 (Requirement 20.8)
-      const hasStreamingConfig = values.streaming.keepaliveSeconds || values.streaming.bootstrapRetries
-      if (hasStreamingConfig) {
-        parsed.streaming = parsed.streaming || {}
-        if (values.streaming.keepaliveSeconds) {
-          parsed.streaming['keepalive-seconds'] = parseInt(values.streaming.keepaliveSeconds, 10) || undefined
-        }
-        if (values.streaming.bootstrapRetries) {
-          parsed.streaming['bootstrap-retries'] = parseInt(values.streaming.bootstrapRetries, 10) || undefined
-        }
+      const keepaliveSeconds = typeof values.streaming?.keepaliveSeconds === 'string' ? values.streaming.keepaliveSeconds : ''
+      const bootstrapRetries = typeof values.streaming?.bootstrapRetries === 'string' ? values.streaming.bootstrapRetries : ''
+      const nonstreamKeepaliveInterval =
+        typeof values.streaming?.nonstreamKeepaliveInterval === 'string'
+          ? values.streaming.nonstreamKeepaliveInterval
+          : ''
+
+      const streamingDefined =
+        hasOwn(parsed, 'streaming') || keepaliveSeconds.trim() || bootstrapRetries.trim()
+      if (streamingDefined) {
+        const streaming = ensureRecord(parsed, 'streaming')
+        setIntFromString(streaming, 'keepalive-seconds', keepaliveSeconds)
+        setIntFromString(streaming, 'bootstrap-retries', bootstrapRetries)
+        deleteIfEmpty(parsed, 'streaming')
       }
 
       // Non-streaming keepalive interval (顶层配置)
-      if (values.streaming.nonstreamKeepaliveInterval) {
-        const interval = parseInt(values.streaming.nonstreamKeepaliveInterval, 10)
-        if (interval > 0) {
-          parsed['nonstream-keepalive-interval'] = interval
-        }
-      }
+      setIntFromString(parsed, 'nonstream-keepalive-interval', nonstreamKeepaliveInterval)
 
       // Gemini API 密钥配置 (Requirement 20.8)
       if (values.geminiApiKeys.length > 0) {
         parsed['gemini-api-key'] = serializeApiKeyEntries(values.geminiApiKeys)
+      } else if (hasOwn(parsed, 'gemini-api-key')) {
+        delete parsed['gemini-api-key']
       }
 
       // Codex API 密钥配置 (Requirement 20.8)
       if (values.codexApiKeys.length > 0) {
         parsed['codex-api-key'] = serializeApiKeyEntries(values.codexApiKeys)
+      } else if (hasOwn(parsed, 'codex-api-key')) {
+        delete parsed['codex-api-key']
       }
 
       // Claude API 密钥配置 (Requirement 20.8)
       if (values.claudeApiKeys.length > 0) {
         parsed['claude-api-key'] = serializeApiKeyEntries(values.claudeApiKeys)
+      } else if (hasOwn(parsed, 'claude-api-key')) {
+        delete parsed['claude-api-key']
       }
 
       // Vertex API 密钥配置 (Requirement 20.8)
       if (values.vertexApiKeys.length > 0) {
         parsed['vertex-api-key'] = serializeApiKeyEntries(values.vertexApiKeys)
+      } else if (hasOwn(parsed, 'vertex-api-key')) {
+        delete parsed['vertex-api-key']
       }
 
       // OpenAI 兼容配置 (Requirement 20.8)
       if (values.openaiCompatibility.length > 0) {
         parsed['openai-compatibility'] = serializeOpenAICompatibility(values.openaiCompatibility)
+      } else if (hasOwn(parsed, 'openai-compatibility')) {
+        delete parsed['openai-compatibility']
       }
 
       // Ampcode 配置
-      if (values.ampUpstreamUrl || values.ampUpstreamApiKey || values.ampRestrictManagementToLocalhost || 
-          values.ampForceModelMappings || values.ampModelMappings.length > 0 || values.ampUpstreamApiKeys.length > 0) {
-        parsed.ampcode = parsed.ampcode || {}
-        if (values.ampUpstreamUrl) parsed.ampcode['upstream-url'] = values.ampUpstreamUrl
-        if (values.ampUpstreamApiKey) parsed.ampcode['upstream-api-key'] = values.ampUpstreamApiKey
-        if (values.ampRestrictManagementToLocalhost) parsed.ampcode['restrict-management-to-localhost'] = true
-        if (values.ampForceModelMappings) parsed.ampcode['force-model-mappings'] = true
+      const ampDefined =
+        hasOwn(parsed, 'ampcode') ||
+        values.ampUpstreamUrl.trim() ||
+        values.ampUpstreamApiKey.trim() ||
+        values.ampRestrictManagementToLocalhost ||
+        values.ampForceModelMappings ||
+        values.ampModelMappings.length > 0 ||
+        values.ampUpstreamApiKeys.length > 0
+      if (ampDefined) {
+        const amp = ensureRecord(parsed, 'ampcode')
+        setString(amp, 'upstream-url', values.ampUpstreamUrl)
+        setString(amp, 'upstream-api-key', values.ampUpstreamApiKey)
+        setBoolean(amp, 'restrict-management-to-localhost', values.ampRestrictManagementToLocalhost)
+        setBoolean(amp, 'force-model-mappings', values.ampForceModelMappings)
+
         if (values.ampModelMappings.length > 0) {
-          parsed.ampcode['model-mappings'] = values.ampModelMappings.map(mapping => ({
+          amp['model-mappings'] = values.ampModelMappings.map((mapping) => ({
             from: mapping.from,
-            to: mapping.to
+            to: mapping.to,
           }))
+        } else if (hasOwn(amp, 'model-mappings')) {
+          delete amp['model-mappings']
         }
-        // Ampcode 上游 API 密钥映射 (Requirement 20.8)
+
         if (values.ampUpstreamApiKeys.length > 0) {
-          parsed.ampcode['upstream-api-keys'] = serializeAmpUpstreamApiKeys(values.ampUpstreamApiKeys)
+          amp['upstream-api-keys'] = serializeAmpUpstreamApiKeys(values.ampUpstreamApiKeys)
+        } else if (hasOwn(amp, 'upstream-api-keys')) {
+          delete amp['upstream-api-keys']
         }
+
+        deleteIfEmpty(parsed, 'ampcode')
       }
 
       // OAuth 模型映射
@@ -319,6 +427,8 @@ export function useVisualConfig() {
               })
           }
         }
+      } else if (hasOwn(parsed, 'oauth-model-mappings')) {
+        delete parsed['oauth-model-mappings']
       }
 
       // OAuth 排除模型配置 (Requirement 20.8)
@@ -329,17 +439,28 @@ export function useVisualConfig() {
             parsed['oauth-excluded-models'][channel] = models
           }
         }
+      } else if (hasOwn(parsed, 'oauth-excluded-models')) {
+        delete parsed['oauth-excluded-models']
       }
 
       // Payload 配置
-      if (values.payloadDefaultRules.length > 0 || values.payloadOverrideRules.length > 0) {
-        parsed.payload = parsed.payload || {}
+      if (
+        hasOwn(parsed, 'payload') ||
+        values.payloadDefaultRules.length > 0 ||
+        values.payloadOverrideRules.length > 0
+      ) {
+        const payload = ensureRecord(parsed, 'payload')
         if (values.payloadDefaultRules.length > 0) {
-          parsed.payload.default = serializePayloadRulesForYaml(values.payloadDefaultRules)
+          payload.default = serializePayloadRulesForYaml(values.payloadDefaultRules)
+        } else if (hasOwn(payload, 'default')) {
+          delete payload.default
         }
         if (values.payloadOverrideRules.length > 0) {
-          parsed.payload.override = serializePayloadRulesForYaml(values.payloadOverrideRules)
+          payload.override = serializePayloadRulesForYaml(values.payloadOverrideRules)
+        } else if (hasOwn(payload, 'override')) {
+          delete payload.override
         }
+        deleteIfEmpty(parsed, 'payload')
       }
 
       return stringifyYaml(parsed, { 
@@ -353,7 +474,16 @@ export function useVisualConfig() {
   }
 
   const setVisualValues = (newValues: Partial<VisualConfigValues>): void => {
-    visualValues.value = { ...visualValues.value, ...newValues }
+    const next: VisualConfigValues = { ...visualValues.value, ...newValues }
+
+    if (newValues.streaming) {
+      next.streaming = {
+        ...visualValues.value.streaming,
+        ...newValues.streaming,
+      }
+    }
+
+    visualValues.value = next
   }
 
   return {
