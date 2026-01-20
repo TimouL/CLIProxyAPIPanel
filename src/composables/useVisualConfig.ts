@@ -200,8 +200,10 @@ export function useVisualConfig() {
         ampForceModelMappings: Boolean(parsed.ampcode?.['force-model-mappings']),
         ampModelMappings: parseAmpModelMappings(parsed.ampcode?.['model-mappings']),
         
-        // OAuth 模型映射
-        oauthModelMappings: parseOauthModelMappings(parsed['oauth-model-mappings']),
+        // OAuth 模型映射（兼容 oauth-model-alias / oauth-model-mappings）
+        oauthModelMappings: parseOauthModelMappings(
+          parsed['oauth-model-alias'] ?? parsed['oauth-model-mappings']
+        ),
         
         // Payload 配置
         payloadDefaultRules: parsePayloadRules(parsed.payload?.default),
@@ -414,10 +416,10 @@ export function useVisualConfig() {
 
       // OAuth 模型映射
       if (values.oauthModelMappings.length > 0) {
-        parsed['oauth-model-mappings'] = {}
+        parsed['oauth-model-alias'] = {}
         for (const channelMapping of values.oauthModelMappings) {
           if (channelMapping.channel && channelMapping.entries.length > 0) {
-            parsed['oauth-model-mappings'][channelMapping.channel] = channelMapping.entries
+            parsed['oauth-model-alias'][channelMapping.channel] = channelMapping.entries
               .filter(entry => entry.name)
               .map(entry => {
                 const obj: Record<string, any> = { name: entry.name }
@@ -427,8 +429,17 @@ export function useVisualConfig() {
               })
           }
         }
-      } else if (hasOwn(parsed, 'oauth-model-mappings')) {
-        delete parsed['oauth-model-mappings']
+
+        if (hasOwn(parsed, 'oauth-model-mappings')) {
+          delete parsed['oauth-model-mappings']
+        }
+      } else {
+        if (hasOwn(parsed, 'oauth-model-alias')) {
+          delete parsed['oauth-model-alias']
+        }
+        if (hasOwn(parsed, 'oauth-model-mappings')) {
+          delete parsed['oauth-model-mappings']
+        }
       }
 
       // OAuth 排除模型配置 (Requirement 20.8)

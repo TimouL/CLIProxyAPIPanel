@@ -21,7 +21,7 @@
       </div>
 
       <!-- Active Channel Mappings -->
-      <div v-if="activeChannelMappings" class="space-y-4">
+      <div class="space-y-4">
         <div
           v-for="(entry, index) in activeChannelMappings.entries"
           :key="entry.id"
@@ -147,8 +147,15 @@ const emit = defineEmits<Emits>()
 
 const activeChannel = ref('gemini-cli')
 
-const activeChannelMappings = computed(() => {
-  return props.values.oauthModelMappings.find(m => m.channel === activeChannel.value)
+const activeChannelMappings = computed<OauthChannelMappings>(() => {
+  return (
+    props.values.oauthModelMappings.find(m => m.channel === activeChannel.value) ?? {
+      id: '',
+      channel: activeChannel.value,
+      originalChannel: activeChannel.value,
+      entries: []
+    }
+  )
 })
 
 const getChannelMappingCount = (channelId: string) => {

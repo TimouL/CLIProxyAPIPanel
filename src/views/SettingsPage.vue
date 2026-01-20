@@ -83,134 +83,19 @@
       </CardSection>
     </Section>
 
-    <!-- Advanced Settings -->
-    <Section title="高级配置" class="mb-8">
-      <div class="space-y-4">
-        <CardSection>
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="font-medium text-foreground">请求超时</h3>
-              <p class="text-sm text-muted-foreground">等待 API 响应的最长时间</p>
-            </div>
-            <div class="w-32">
-              <Input
-                v-model.number="settings.timeout"
-                type="number"
-                min="5000"
-                max="120000"
-                step="1000"
-              />
-            </div>
+    <!-- Backend Config (moved to visual config) -->
+    <Section title="后端配置" class="mb-8">
+      <CardSection>
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="font-medium text-foreground">已迁移到可视化配置</h3>
+            <p class="text-sm text-muted-foreground">
+              调试、代理、WebSocket 认证等服务端配置请在「配置管理 → 可视化编辑」中修改
+            </p>
           </div>
-          <p class="text-xs text-muted-foreground mt-2">当前: {{ settings.timeout }}ms</p>
-        </CardSection>
-
-        <!-- 系统配置开关 -->
-        <CardSection>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-medium text-foreground">调试模式</h3>
-                <p class="text-sm text-muted-foreground">启用详细的调试日志输出</p>
-              </div>
-              <Switch
-                :checked="systemConfig.debug"
-                :disabled="!authStore.isConnected || loadingConfig"
-                @update:checked="updateSystemConfig('debug', $event)"
-              />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-medium text-foreground">使用统计</h3>
-                <p class="text-sm text-muted-foreground">收集匿名使用统计信息</p>
-              </div>
-              <Switch
-                :checked="systemConfig.usageStatisticsEnabled"
-                :disabled="!authStore.isConnected || loadingConfig"
-                @update:checked="updateSystemConfig('usageStatisticsEnabled', $event)"
-              />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-medium text-foreground">日志记录到文件</h3>
-                <p class="text-sm text-muted-foreground">将日志保存到本地文件</p>
-              </div>
-              <Switch
-                :checked="systemConfig.loggingToFile"
-                :disabled="!authStore.isConnected || loadingConfig"
-                @update:checked="updateSystemConfig('loggingToFile', $event)"
-              />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-medium text-foreground">WebSocket 认证</h3>
-                <p class="text-sm text-muted-foreground">启用 WebSocket 连接认证</p>
-              </div>
-              <Switch
-                :checked="systemConfig.wsAuth"
-                :disabled="!authStore.isConnected || loadingConfig"
-                @update:checked="updateSystemConfig('wsAuth', $event)"
-              />
-            </div>
-          </div>
-        </CardSection>
-
-        <!-- 网络配置 -->
-        <CardSection>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">代理服务器</label>
-              <div class="flex gap-2">
-                <Input
-                  v-model="networkConfig.proxyUrl"
-                  placeholder="http://proxy.example.com:8080"
-                  :disabled="!authStore.isConnected"
-                  class="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  @click="updateNetworkConfig('proxyUrl', networkConfig.proxyUrl)"
-                  :disabled="!authStore.isConnected || updatingNetwork"
-                >
-                  <Loader2 v-if="updatingNetwork" class="w-4 h-4 mr-2 animate-spin" />
-                  更新
-                </Button>
-              </div>
-              <p class="text-xs text-muted-foreground mt-1">
-                当前: {{ systemConfig.proxyUrl || '未设置' }}
-              </p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-foreground mb-2">请求重试次数</label>
-              <div class="flex gap-2">
-                <Input
-                  v-model.number="networkConfig.requestRetry"
-                  type="number"
-                  min="0"
-                  max="10"
-                  :disabled="!authStore.isConnected"
-                  class="w-32"
-                />
-                <Button
-                  variant="outline"
-                  @click="updateNetworkConfig('requestRetry', networkConfig.requestRetry)"
-                  :disabled="!authStore.isConnected || updatingNetwork"
-                >
-                  <Loader2 v-if="updatingNetwork" class="w-4 h-4 mr-2 animate-spin" />
-                  更新
-                </Button>
-              </div>
-              <p class="text-xs text-muted-foreground mt-1">
-                当前: {{ systemConfig.requestRetry ?? 0 }} 次
-              </p>
-            </div>
-          </div>
-        </CardSection>
-      </div>
+          <Button variant="outline" size="sm" @click="goToConfig">前往配置管理</Button>
+        </div>
+      </CardSection>
     </Section>
 
     <!-- About -->
@@ -263,18 +148,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useConfigStore } from '@/stores/config'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { useToast } from '@/composables/useToast'
-import { configApi } from '@/api/config'
 import { apiClient } from '@/api/client'
 import PageContainer from '@/components/layout/PageContainer.vue'
-import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
 import Section from '@/components/layout/Section.vue'
 import Button from '@/components/ui/button.vue'
 import Input from '@/components/ui/input.vue'
-import Switch from '@/components/ui/switch.vue'
 import {
   Eye,
   EyeOff,
@@ -287,7 +168,6 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
-const configStore = useConfigStore()
 const { themeMode, setThemeMode } = useDarkMode()
 const { toast } = useToast()
 
@@ -295,8 +175,6 @@ const showKey = ref(false)
 const testing = ref(false)
 const checkingUpdate = ref(false)
 const updating = ref(false)
-const loadingConfig = ref(false)
-const updatingNetwork = ref(false)
 const latestVersion = ref<string | null>(null)
 const hasUpdate = ref(false)
 
@@ -306,127 +184,11 @@ const clientVersion = __APP_VERSION__ || '未知'
 const settings = reactive({
   apiBase: authStore.apiBase,
   managementKey: '',
-  timeout: 30000,
-})
-
-// 系统配置状态
-const systemConfig = reactive({
-  debug: false,
-  usageStatisticsEnabled: false,
-  loggingToFile: false,
-  wsAuth: false,
-  proxyUrl: '',
-  requestRetry: 0,
-})
-
-// 网络配置临时状态
-const networkConfig = reactive({
-  proxyUrl: '',
-  requestRetry: 0,
 })
 
 const hasConnectionChanges = computed(() => {
   return settings.apiBase !== authStore.apiBase || settings.managementKey.trim() !== ''
 })
-
-// 加载系统配置
-const loadSystemConfig = async () => {
-  if (!authStore.isConnected) return
-  
-  loadingConfig.value = true
-  try {
-    const config = await configStore.fetchConfig()
-    if (config) {
-      systemConfig.debug = config.debug || false
-      systemConfig.usageStatisticsEnabled = config.usageStatisticsEnabled || false
-      systemConfig.loggingToFile = config.loggingToFile || false
-      systemConfig.wsAuth = config.wsAuth || false
-      systemConfig.proxyUrl = config.proxyUrl || ''
-      systemConfig.requestRetry = config.requestRetry || 0
-      
-      // 更新网络配置临时状态
-      networkConfig.proxyUrl = config.proxyUrl || ''
-      networkConfig.requestRetry = config.requestRetry || 0
-    }
-  } catch (error) {
-    console.warn('Failed to load system config:', error)
-  } finally {
-    loadingConfig.value = false
-  }
-}
-
-// 更新系统配置
-const updateSystemConfig = async (key: string, value: any) => {
-  if (!authStore.isConnected) return
-  
-  try {
-    switch (key) {
-      case 'debug':
-        await configApi.updateDebug(value)
-        systemConfig.debug = value
-        break
-      case 'usageStatisticsEnabled':
-        await configApi.updateUsageStatistics(value)
-        systemConfig.usageStatisticsEnabled = value
-        break
-      case 'loggingToFile':
-        await configApi.updateLoggingToFile(value)
-        systemConfig.loggingToFile = value
-        break
-      case 'wsAuth':
-        await configApi.updateWsAuth(value)
-        systemConfig.wsAuth = value
-        break
-    }
-    
-    // 清除配置缓存
-    configStore.clearCache()
-    
-    toast({ title: '配置已更新' })
-  } catch (error) {
-    toast({ 
-      title: '更新失败', 
-      description: (error as Error).message,
-      variant: 'destructive' 
-    })
-  }
-}
-
-// 更新网络配置
-const updateNetworkConfig = async (key: string, value: any) => {
-  if (!authStore.isConnected) return
-  
-  updatingNetwork.value = true
-  try {
-    switch (key) {
-      case 'proxyUrl':
-        if (value) {
-          await configApi.updateProxyUrl(value)
-        } else {
-          await configApi.clearProxyUrl()
-        }
-        systemConfig.proxyUrl = value
-        break
-      case 'requestRetry':
-        await configApi.updateRequestRetry(Number(value) || 0)
-        systemConfig.requestRetry = Number(value) || 0
-        break
-    }
-    
-    // 清除配置缓存
-    configStore.clearCache()
-    
-    toast({ title: '网络配置已更新' })
-  } catch (error) {
-    toast({ 
-      title: '更新失败', 
-      description: (error as Error).message,
-      variant: 'destructive' 
-    })
-  } finally {
-    updatingNetwork.value = false
-  }
-}
 
 // 版本比较函数
 function compareVersions(latest: string, current: string): number {
@@ -509,13 +271,16 @@ async function updateWebUI() {
 }
 
 onMounted(() => {
-  // 进入页面时检查更新和加载配置
+  // 进入页面时检查更新
   checkForUpdates()
-  loadSystemConfig()
 })
 
 function setTheme(mode: 'light' | 'dark' | 'system') {
   setThemeMode(mode)
+}
+
+function goToConfig() {
+  router.push('/config')
 }
 
 async function testConnection() {
@@ -553,8 +318,6 @@ async function updateConnection() {
     if (success) {
       toast({ title: '连接已更新' })
       settings.managementKey = ''
-      // 重新加载系统配置
-      loadSystemConfig()
     } else {
       toast({ title: '更新连接失败', variant: 'destructive' })
     }
