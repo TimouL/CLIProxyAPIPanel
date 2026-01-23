@@ -106,13 +106,13 @@
             <span class="text-muted-foreground">客户端版本</span>
             <div class="flex items-center gap-2">
               <span class="text-foreground font-mono">{{ clientVersion }}</span>
-              <div v-if="checkingUpdate" class="flex items-center text-muted-foreground">
+              <div v-if="checkingClientUpdate" class="flex items-center text-muted-foreground">
                 <Loader2 class="w-3 h-3 animate-spin mr-1" />
                 <span class="text-xs">检查更新中...</span>
               </div>
-              <div v-else-if="hasUpdate" class="flex items-center gap-2">
+              <div v-else-if="hasClientUpdate" class="flex items-center gap-2">
                 <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                  有新版本 {{ latestVersion }}
+                  有新版本 {{ latestClientVersion }}
                 </span>
                 <Button 
                   size="sm" 
@@ -128,7 +128,16 @@
           </div>
           <div class="flex justify-between">
             <span class="text-muted-foreground">服务器版本</span>
-            <span class="text-foreground font-mono">{{ authStore.serverVersion || '未知' }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-foreground font-mono">{{ authStore.serverVersion || '未知' }}</span>
+              <div v-if="checkingServerUpdate" class="flex items-center text-muted-foreground">
+                <Loader2 class="w-3 h-3 animate-spin mr-1" />
+                <span class="text-xs">检查更新中...</span>
+              </div>
+              <span v-else-if="hasServerUpdate" class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                有新版本 {{ latestServerVersion }}
+              </span>
+            </div>
           </div>
         </div>
       </CardSection>
@@ -145,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDarkMode } from '@/composables/useDarkMode'
@@ -173,13 +182,16 @@ const { toast } = useToast()
 
 const showKey = ref(false)
 const testing = ref(false)
-const checkingUpdate = ref(false)
 const updating = ref(false)
-const latestVersion = ref<string | null>(null)
-const hasUpdate = ref(false)
 
 // 获取客户端版本
 const clientVersion = __APP_VERSION__ || '未知'
+const checkingClientUpdate = computed(() => authStore.checkingClientUpdate)
+const latestClientVersion = computed(() => authStore.latestClientVersion)
+const hasClientUpdate = computed(() => authStore.hasClientUpdate)
+const checkingServerUpdate = computed(() => authStore.checkingServerUpdate)
+const latestServerVersion = computed(() => authStore.latestServerVersion)
+const hasServerUpdate = computed(() => authStore.hasServerUpdate)
 
 const settings = reactive({
   apiBase: authStore.apiBase,
@@ -190,65 +202,18 @@ const hasConnectionChanges = computed(() => {
   return settings.apiBase !== authStore.apiBase || settings.managementKey.trim() !== ''
 })
 
-// 版本比较函数
-function compareVersions(latest: string, current: string): number {
-  const parseVersion = (version: string) => {
-    return version.replace(/^v/, '').split('.').map(num => parseInt(num, 10) || 0)
-  }
-  
-  const latestParts = parseVersion(latest)
-  const currentParts = parseVersion(current)
-  const maxLength = Math.max(latestParts.length, currentParts.length)
-  
-  for (let i = 0; i < maxLength; i++) {
-    const latestPart = latestParts[i] || 0
-    const currentPart = currentParts[i] || 0
-    
-    if (latestPart > currentPart) return 1
-    if (latestPart < currentPart) return -1
-  }
-  
-  return 0
-}
-
-// 检查更新
-async function checkForUpdates() {
-  if (checkingUpdate.value) return
-  
-  checkingUpdate.value = true
-  try {
-    const response = await fetch('https://api.github.com/repos/AoaoMH/CLIProxyAPIPanel/releases/latest')
-    if (!response.ok) throw new Error('Failed to fetch latest release')
-    
-    const data = await response.json()
-    latestVersion.value = data.tag_name
-    
-    if (latestVersion.value && compareVersions(latestVersion.value, clientVersion) > 0) {
-      hasUpdate.value = true
-      toast({ 
-        title: '发现新版本', 
-        description: `最新版本 ${latestVersion.value} 可用，当前版本 ${clientVersion}` 
-      })
-    }
-  } catch (error) {
-    console.warn('Failed to check for updates:', error)
-  } finally {
-    checkingUpdate.value = false
-  }
-}
-
 // 更新 WebUI
 async function updateWebUI() {
-  if (!latestVersion.value || updating.value) return
+  if (!latestClientVersion.value || updating.value) return
   
   updating.value = true
   try {
-    await apiClient.post('/webui/update', { version: latestVersion.value })
+    await apiClient.post('/webui/update', { version: latestClientVersion.value })
     
     // 显示成功提示
     toast({
       title: '更新完成',
-      description: `WebUI 已更新到版本 ${latestVersion.value}`
+      description: `WebUI 已更新到版本 ${latestClientVersion.value}`
     })
     
     // 询问是否刷新
@@ -258,7 +223,7 @@ async function updateWebUI() {
       }
     }, 1000)
     
-    hasUpdate.value = false
+    authStore.hasClientUpdate = false
   } catch (error) {
     toast({ 
       title: '更新失败', 
@@ -269,11 +234,6 @@ async function updateWebUI() {
     updating.value = false
   }
 }
-
-onMounted(() => {
-  // 进入页面时检查更新
-  checkForUpdates()
-})
 
 function setTheme(mode: 'light' | 'dark' | 'system') {
   setThemeMode(mode)

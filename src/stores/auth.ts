@@ -40,6 +40,26 @@ function clearAuth(): void {
   localStorage.removeItem(STORAGE_KEY_AUTH)
 }
 
+function compareVersions(latest: string, current: string): number {
+  const parseVersion = (version: string) => {
+    return version.replace(/^v/, '').split('.').map(num => parseInt(num, 10) || 0)
+  }
+
+  const latestParts = parseVersion(latest)
+  const currentParts = parseVersion(current)
+  const maxLength = Math.max(latestParts.length, currentParts.length)
+
+  for (let i = 0; i < maxLength; i++) {
+    const latestPart = latestParts[i] || 0
+    const currentPart = currentParts[i] || 0
+
+    if (latestPart > currentPart) return 1
+    if (latestPart < currentPart) return -1
+  }
+
+  return 0
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const apiBase = ref('')
   const managementKey = ref('')
@@ -48,8 +68,30 @@ export const useAuthStore = defineStore('auth', () => {
   const connectionError = ref<string | null>(null)
   const serverVersion = ref<string | null>(null)
   const serverBuildDate = ref<string | null>(null)
+  const latestClientVersion = ref<string | null>(null)
+  const latestServerVersion = ref<string | null>(null)
+  const hasClientUpdate = ref(false)
+  const hasServerUpdate = ref(false)
+  const checkingClientUpdate = ref(false)
+  const checkingServerUpdate = ref(false)
 
   const hasCredentials = computed(() => !!apiBase.value && !!managementKey.value)
+
+  const updateClientFlag = (currentVersion: string) => {
+    if (!latestClientVersion.value || currentVersion === '未知') {
+      hasClientUpdate.value = false
+      return
+    }
+    hasClientUpdate.value = compareVersions(latestClientVersion.value, currentVersion) > 0
+  }
+
+  const updateServerFlag = () => {
+    if (!latestServerVersion.value || !serverVersion.value) {
+      hasServerUpdate.value = false
+      return
+    }
+    hasServerUpdate.value = compareVersions(latestServerVersion.value, serverVersion.value) > 0
+  }
 
   /**
    * 初始化 - 从 localStorage 恢复连接配置
@@ -70,6 +112,7 @@ export const useAuthStore = defineStore('auth', () => {
       const detail = (event as CustomEvent).detail
       if (detail.version) serverVersion.value = detail.version
       if (detail.buildDate) serverBuildDate.value = detail.buildDate
+      updateServerFlag()
     })
 
     // 监听 401 未授权事件
@@ -119,6 +162,7 @@ export const useAuthStore = defineStore('auth', () => {
     isConnected.value = false
     serverVersion.value = null
     serverBuildDate.value = null
+    hasServerUpdate.value = false
     clearAuth()
   }
 
@@ -137,6 +181,42 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
     return false
+  }
+
+  async function checkClientUpdate(currentVersion: string): Promise<void> {
+    if (checkingClientUpdate.value) return
+
+    checkingClientUpdate.value = true
+    try {
+      const response = await fetch('https://api.github.com/repos/AoaoMH/CLIProxyAPIPanel/releases/latest')
+      if (!response.ok) throw new Error('Failed to fetch latest release')
+
+      const data = await response.json()
+      latestClientVersion.value = data.tag_name
+      updateClientFlag(currentVersion)
+    } catch (error) {
+      console.warn('Failed to check client update:', error)
+    } finally {
+      checkingClientUpdate.value = false
+    }
+  }
+
+  async function checkServerUpdate(): Promise<void> {
+    if (checkingServerUpdate.value) return
+
+    checkingServerUpdate.value = true
+    try {
+      const response = await fetch('https://api.github.com/repos/AoaoMH/CLIProxyAPI-Aoao/releases/latest')
+      if (!response.ok) throw new Error('Failed to fetch latest release')
+
+      const data = await response.json()
+      latestServerVersion.value = data.tag_name
+      updateServerFlag()
+    } catch (error) {
+      console.warn('Failed to check server update:', error)
+    } finally {
+      checkingServerUpdate.value = false
+    }
   }
 
   /**
@@ -162,11 +242,19 @@ export const useAuthStore = defineStore('auth', () => {
     connectionError,
     serverVersion,
     serverBuildDate,
+    latestClientVersion,
+    latestServerVersion,
+    hasClientUpdate,
+    hasServerUpdate,
+    checkingClientUpdate,
+    checkingServerUpdate,
     hasCredentials,
     init,
     connect,
     disconnect,
     autoConnect,
-    refreshServerInfo
+    refreshServerInfo,
+    checkClientUpdate,
+    checkServerUpdate
   }
 })

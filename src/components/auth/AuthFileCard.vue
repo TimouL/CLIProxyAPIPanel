@@ -46,16 +46,6 @@
             </div>
             
             <div class="flex items-center gap-2 shrink-0">
-              <div v-if="canToggleDisabled" class="flex items-center gap-1">
-                <Switch
-                  class="scale-90 origin-right"
-                  :model-value="!isDisabled"
-                  :disabled="toggling"
-                  :title="isDisabled ? '启用凭证' : '禁用凭证'"
-                  @update:model-value="onToggleEnabled"
-                />
-              </div>
-
               <!-- Actions Buttons -->
               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                 <Button v-if="showQuota" variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:scale-110 transition-all duration-200" aria-label="支持模型" title="支持模型" @click="$emit('show-models')">
@@ -70,6 +60,16 @@
                 <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-110 transition-all duration-200" aria-label="删除" @click="$emit('delete', file.name)">
                   <Trash2 class="h-3.5 w-3.5" />
                 </Button>
+              </div>
+
+              <div v-if="canToggleDisabled" class="flex items-center gap-1">
+                <Switch
+                  class="scale-90 origin-right"
+                  :model-value="!isDisabled"
+                  :disabled="toggling"
+                  :title="isDisabled ? '启用凭证' : '禁用凭证'"
+                  @update:model-value="onToggleEnabled"
+                />
               </div>
             </div>
           </div>

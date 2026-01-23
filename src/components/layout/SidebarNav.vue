@@ -39,6 +39,9 @@
                 :stroke-width="isItemActive(item.href) ? 2 : 1.75"
               />
               <span class="text-[13px] tracking-tight">{{ item.name }}</span>
+              <span v-if="item.badge" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                {{ item.badge }}
+              </span>
             </div>
 
             <!-- Active Indicator -->
@@ -61,6 +64,7 @@ export interface NavigationItem {
   href: string
   icon: Component
   description?: string
+  badge?: string
 }
 
 export interface NavigationGroup {

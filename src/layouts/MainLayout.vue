@@ -207,7 +207,12 @@
                         :is="item.icon"
                         class="h-4 w-4 shrink-0"
                       />
-                      <span class="truncate">{{ item.name }}</span>
+                      <span class="flex items-center gap-1 min-w-0">
+                        <span class="truncate">{{ item.name }}</span>
+                        <span v-if="item.badge" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                          {{ item.badge }}
+                        </span>
+                      </span>
                     </RouterLink>
                   </div>
                 </div>
@@ -307,6 +312,7 @@ const { themeMode, toggleDarkMode } = useDarkMode()
 const showAuthError = ref(false)
 const mobileMenuOpen = ref(false)
 let authCheckInterval: number | null = null
+const hasUpdateBadge = computed(() => authStore.hasClientUpdate || authStore.hasServerUpdate)
 
 // Auto close mobile menu on route change
 watch(() => route.path, () => {
@@ -374,7 +380,7 @@ const navigation = computed(() => [
     items: [
       { name: '配置', href: '/config', icon: FileCode },
       { name: '备份', href: '/backup', icon: Archive },
-      { name: '设置', href: '/settings', icon: Settings },
+      { name: '设置', href: '/settings', icon: Settings, badge: hasUpdateBadge.value ? 'NEW' : undefined },
     ]
   }
 ])
