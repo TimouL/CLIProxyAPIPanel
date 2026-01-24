@@ -112,6 +112,7 @@
         @delete="deleteFile"
         @show-models="showModelsModal"
         @show-info="showInfoModal"
+        @edit="openEditModal"
         @refresh="handleSectionRefresh"
         @toggle-disabled="toggleAuthFileDisabled"
       />
@@ -127,6 +128,7 @@
         @delete="deleteFile"
         @show-models="showModelsModal"
         @show-info="showInfoModal"
+        @edit="openEditModal"
         @refresh="handleSectionRefresh"
         @toggle-disabled="toggleAuthFileDisabled"
       />
@@ -142,6 +144,7 @@
         @delete="deleteFile"
         @show-models="showModelsModal"
         @show-info="showInfoModal"
+        @edit="openEditModal"
         @refresh="handleSectionRefresh"
         @toggle-disabled="toggleAuthFileDisabled"
       />
@@ -157,6 +160,7 @@
         @delete="deleteFile"
         @show-models="showModelsModal"
         @show-info="showInfoModal"
+        @edit="openEditModal"
         @refresh="handleSectionRefresh"
         @toggle-disabled="toggleAuthFileDisabled"
       />
@@ -232,11 +236,65 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick Edit Modal -->
+    <Dialog
+      :open="editModal.open"
+      @update:open="(v) => (v ? null : closeEditModal())"
+      size="md"
+      :title="editModal.target?.name ? `快捷修改 - ${editModal.target.name}` : '快捷修改'"
+      description="快速修改 OAuth 凭证文件的 proxy/prefix（写入 JSON 文件）"
+    >
+      <div class="space-y-4">
+        <div v-if="editModal.loading" class="py-8 text-center text-muted-foreground">
+          <RefreshCw class="h-6 w-6 animate-spin mx-auto mb-2" />
+          正在读取凭证文件...
+        </div>
+
+        <div v-else class="space-y-4">
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-foreground mb-1 block">Proxy URL（可选）</label>
+            <Input
+              v-model="editModal.form.proxyUrl"
+              placeholder="socks5://user:pass@host:1080"
+              :disabled="editModal.saving"
+            />
+            <div class="text-xs text-muted-foreground">
+              写入字段：<code class="font-mono">proxy_url</code>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-foreground mb-1 block">Prefix（可选）</label>
+            <Input
+              v-model="editModal.form.prefix"
+              placeholder="teamA"
+              :disabled="editModal.saving"
+            />
+            <div class="text-xs text-muted-foreground">
+              写入字段：<code class="font-mono">prefix</code>（不能包含 <code class="font-mono">/</code>）
+            </div>
+          </div>
+
+          <div v-if="editModal.error" class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+            {{ editModal.error }}
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button @click="saveEditModal" :disabled="editModal.loading || editModal.saving">
+          <RefreshCw v-if="editModal.saving" class="w-4 h-4 mr-2 animate-spin" />
+          保存
+        </Button>
+        <Button variant="outline" @click="closeEditModal" :disabled="editModal.saving">取消</Button>
+      </template>
+    </Dialog>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide, reactive } from 'vue'
 import { apiClient } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useClipboard } from '@/composables/useClipboard'
@@ -246,6 +304,8 @@ import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
 import Button from '@/components/ui/button.vue'
+import Dialog from '@/components/ui/dialog/Dialog.vue'
+import Input from '@/components/ui/input.vue'
 import AuthFileSection from '@/components/auth/AuthFileSection.vue'
 import type { AuthFileItem, AuthFilesResponse } from '@/types'
 import {
@@ -280,6 +340,20 @@ const modelsFileName = ref('')
 // Info modal state
 const infoModalOpen = ref(false)
 const selectedFileInfo = ref<AuthFileItem | null>(null)
+
+// Quick edit modal state
+const editModal = reactive({
+  open: false,
+  loading: false,
+  saving: false,
+  error: '',
+  target: null as AuthFileItem | null,
+  original: null as Record<string, any> | null,
+  form: {
+    proxyUrl: '',
+    prefix: ''
+  }
+})
 
 // Refresh trigger for child cards - provide a reactive ref that contains files to refresh
 const refreshTrigger = ref<Set<string>>(new Set())
@@ -493,6 +567,113 @@ async function showModelsModal(file: AuthFileItem) {
 function showInfoModal(file: AuthFileItem) {
   selectedFileInfo.value = file
   infoModalOpen.value = true
+}
+
+function coerceJsonObject(input: unknown): Record<string, any> | null {
+  if (!input) return null
+  if (typeof input === 'object') return input as Record<string, any>
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input)
+      if (parsed && typeof parsed === 'object') return parsed as Record<string, any>
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+async function openEditModal(file: AuthFileItem) {
+  editModal.open = true
+  editModal.loading = true
+  editModal.saving = false
+  editModal.error = ''
+  editModal.target = file
+  editModal.original = null
+  editModal.form.proxyUrl = (file as any).proxy_url ?? (file as any).proxyUrl ?? ''
+  editModal.form.prefix = (file as any).prefix ?? ''
+
+  try {
+    const response = await apiClient.getRaw(`/auth-files/download?name=${encodeURIComponent(file.name)}`)
+    const json = coerceJsonObject(response.data)
+    if (!json) {
+      throw new Error('无法解析凭证文件内容')
+    }
+    editModal.original = json
+    editModal.form.proxyUrl = typeof json.proxy_url === 'string' ? json.proxy_url : ''
+    editModal.form.prefix = typeof json.prefix === 'string' ? json.prefix : ''
+  } catch (err) {
+    editModal.error = err instanceof Error ? err.message : '读取凭证文件失败'
+  } finally {
+    editModal.loading = false
+  }
+}
+
+function closeEditModal() {
+  editModal.open = false
+  editModal.loading = false
+  editModal.saving = false
+  editModal.error = ''
+  editModal.target = null
+  editModal.original = null
+  editModal.form.proxyUrl = ''
+  editModal.form.prefix = ''
+}
+
+async function saveEditModal() {
+  if (!editModal.target) return
+  if (editModal.saving) return
+
+  const name = editModal.target.name
+  const proxyUrl = editModal.form.proxyUrl.trim()
+  const prefixRaw = editModal.form.prefix.trim().replace(/^\/+|\/+$/g, '')
+
+  if (prefixRaw.includes('/')) {
+    editModal.error = 'Prefix 不能包含 /'
+    return
+  }
+
+  editModal.saving = true
+  editModal.error = ''
+
+  try {
+    // Prefer server-side patch (newer versions).
+    try {
+      await apiClient.patch('/auth-files/metadata', {
+        name,
+        proxy_url: proxyUrl,
+        prefix: prefixRaw
+      })
+    } catch (err) {
+      const status = (err as any)?.status as number | undefined
+      const message = err instanceof Error ? err.message : ''
+      const notSupported = status === 404 || message.toLowerCase().includes('not found')
+      if (!notSupported) throw err
+
+      // Fallback: download + overwrite file via legacy upload endpoint.
+      const response = await apiClient.getRaw(`/auth-files/download?name=${encodeURIComponent(name)}`)
+      const json = coerceJsonObject(response.data) || {}
+
+      if (proxyUrl) (json as any).proxy_url = proxyUrl
+      else delete (json as any).proxy_url
+
+      if (prefixRaw) (json as any).prefix = prefixRaw
+      else delete (json as any).prefix
+
+      await apiClient.post(`/auth-files?name=${encodeURIComponent(name)}`, JSON.stringify(json), {
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    toast({ title: '保存成功' })
+    closeEditModal()
+    await fetchFiles()
+  } catch (err) {
+    editModal.error = err instanceof Error ? err.message : '保存失败'
+    toast({ title: '保存失败', variant: 'destructive' })
+  } finally {
+    editModal.saving = false
+  }
 }
 
 // Copy model ID to clipboard

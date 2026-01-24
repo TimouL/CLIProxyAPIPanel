@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { useVisualConfig } from './useVisualConfig'
+import { parse as parseYaml } from 'yaml'
 
 describe('useVisualConfig Integration', () => {
   it('should load basic configuration from YAML', () => {
@@ -92,6 +93,37 @@ openai-compatibility:
     expect(visualValues.value.openaiCompatibility[0].apiKeyEntries).toHaveLength(1)
     expect(visualValues.value.openaiCompatibility[0].apiKeyEntries[0].apiKey).toBe('custom-key')
     expect(visualValues.value.openaiCompatibility[0].apiKeyEntries[0].proxyUrl).toBe('https://proxy.com')
+  })
+
+  it('should handle api-keys entries as objects (no [object Object])', () => {
+    const { loadVisualValuesFromYaml, applyVisualChangesToYaml, setVisualValues, visualValues } = useVisualConfig()
+
+    const yamlContent = `
+api-keys:
+  - id: "id-1"
+    api-key: "key-1"
+    is-active: true
+  - id: "id-2"
+    api-key: "key-2"
+    is-active: false
+debug: false
+`
+
+    loadVisualValuesFromYaml(yamlContent)
+
+    expect(visualValues.value.apiKeysText).toBe('key-1\nkey-2')
+
+    // Update an unrelated field; api-keys should be preserved as objects.
+    setVisualValues({ debug: true })
+    const updatedYaml = applyVisualChangesToYaml(yamlContent)
+    const parsed = parseYaml(updatedYaml) as any
+
+    expect(parsed.debug).toBe(true)
+    expect(Array.isArray(parsed['api-keys'])).toBe(true)
+    expect(parsed['api-keys'][0]['api-key']).toBe('key-1')
+    expect(parsed['api-keys'][0]['is-active']).toBe(true)
+    expect(parsed['api-keys'][1]['api-key']).toBe('key-2')
+    expect(parsed['api-keys'][1]['is-active']).toBe(false)
   })
 
   it('should apply visual changes back to YAML correctly', () => {

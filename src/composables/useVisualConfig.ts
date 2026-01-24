@@ -78,6 +78,43 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
+function extractApiKeyValue(raw: unknown): string | null {
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    return trimmed ? trimmed : null
+  }
+
+  const record = asRecord(raw)
+  if (!record) return null
+
+  const candidates = [
+    record['api-key'],
+    record.apiKey,
+    record.key,
+    record.Key,
+  ]
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      const trimmed = candidate.trim()
+      if (trimmed) return trimmed
+    }
+  }
+
+  return null
+}
+
+function parseApiKeysText(raw: unknown): string {
+  if (!Array.isArray(raw)) return ''
+
+  const keys: string[] = []
+  for (const item of raw) {
+    const key = extractApiKeyValue(item)
+    if (key) keys.push(key)
+  }
+  return keys.join('\n')
+}
+
 function ensureRecord(parent: Record<string, unknown>, key: string): Record<string, unknown> {
   const existing = asRecord(parent[key])
   if (existing) return existing
@@ -168,7 +205,7 @@ export function useVisualConfig() {
         
         // 认证配置
         authDir: parsed['auth-dir'] || '',
-        apiKeysText: Array.isArray(parsed['api-keys']) ? parsed['api-keys'].join('\n') : '',
+        apiKeysText: parseApiKeysText(parsed['api-keys']),
         
         // 系统配置
         debug: Boolean(parsed.debug),
@@ -289,14 +326,16 @@ export function useVisualConfig() {
 
       // 其他配置
       setString(parsed, 'auth-dir', values.authDir)
-      const apiKeys = values.apiKeysText
-        .split('\n')
-        .map((key) => key.trim())
-        .filter(Boolean)
-      if (apiKeys.length > 0) {
-        parsed['api-keys'] = apiKeys
-      } else if (hasOwn(parsed, 'api-keys')) {
-        delete parsed['api-keys']
+      if (values.apiKeysText !== baselineValues.value.apiKeysText) {
+        const apiKeys = values.apiKeysText
+          .split('\n')
+          .map((key) => key.trim())
+          .filter(Boolean)
+        if (apiKeys.length > 0) {
+          parsed['api-keys'] = apiKeys
+        } else if (hasOwn(parsed, 'api-keys')) {
+          delete parsed['api-keys']
+        }
       }
 
       setBoolean(parsed, 'debug', values.debug)

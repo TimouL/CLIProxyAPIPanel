@@ -60,6 +60,7 @@
         @delete="$emit('delete', $event)"
         @show-models="$emit('show-models', file)"
         @show-info="$emit('show-info', file)"
+        @edit="$emit('edit', file)"
         @toggle-disabled="$emit('toggle-disabled', $event)"
       />
     </div>
@@ -111,6 +112,7 @@ const emit = defineEmits<{
   (e: 'delete', name: string): void
   (e: 'show-models', file: AuthFileItem): void
   (e: 'show-info', file: AuthFileItem): void
+  (e: 'edit', file: AuthFileItem): void
   (e: 'refresh', files: AuthFileItem[]): void
   (e: 'toggle-disabled', payload: { file: AuthFileItem; disabled: boolean }): void
 }>()

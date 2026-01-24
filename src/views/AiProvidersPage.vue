@@ -51,7 +51,7 @@
 
             <div v-else class="grid gap-4">
               <div v-for="(config, index) in geminiKeys" :key="index" 
-                :class="['provider-card', isConfigDisabled(getExcludedModels(config)) ? 'opacity-60 grayscale-[0.5]' : '']">
+                :class="['provider-card', isConfigDisabled(config) ? 'opacity-60 grayscale-[0.5]' : '']">
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -62,7 +62,7 @@
                         <code class="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                           {{ maskKey(getApiKey(config)) }}
                         </code>
-                        <Badge v-if="isConfigDisabled(getExcludedModels(config))" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
+                        <Badge v-if="isConfigDisabled(config)" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
                       </div>
                       
                       <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -93,17 +93,18 @@
                     </div>
                   </div>
 
-                  <div class="flex items-start gap-2">
-                    <div class="flex items-center mr-2">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center mr-1">
                       <Switch 
-                        :checked="!isConfigDisabled(getExcludedModels(config))"
-                        @update:checked="(val) => toggleConfig('gemini', index, val)"
+                        class="scale-90 origin-right"
+                        :model-value="!isConfigDisabled(config)"
+                        @update:model-value="(val) => toggleConfig('gemini', index, val)"
                       />
                     </div>
-                    <Button variant="ghost" size="icon" @click="openModal('gemini', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg" @click="openModal('gemini', index)">
                       <Pencil class="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('gemini', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('gemini', index)">
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
@@ -133,7 +134,7 @@
 
             <div v-else class="grid gap-4">
               <div v-for="(config, index) in claudeConfigs" :key="index"
-                :class="['provider-card', isConfigDisabled(getExcludedModels(config)) ? 'opacity-60 grayscale-[0.5]' : '']">
+                :class="['provider-card', isConfigDisabled(config) ? 'opacity-60 grayscale-[0.5]' : '']">
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
@@ -144,7 +145,7 @@
                         <code class="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                           {{ maskKey(getApiKey(config)) }}
                         </code>
-                        <Badge v-if="isConfigDisabled(getExcludedModels(config))" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
+                        <Badge v-if="isConfigDisabled(config)" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
                       </div>
 
                       <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -153,6 +154,9 @@
                         </span>
                          <span v-if="getBaseUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           Base: {{ getBaseUrl(config) }}
+                        </span>
+                        <span v-if="getProxyUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          代理: {{ getProxyUrl(config) }}
                         </span>
                       </div>
 
@@ -171,17 +175,18 @@
                     </div>
                   </div>
 
-                  <div class="flex items-start gap-2">
-                    <div class="flex items-center mr-2">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center mr-1">
                       <Switch 
-                        :checked="!isConfigDisabled(getExcludedModels(config))"
-                        @update:checked="(val) => toggleConfig('claude', index, val)"
+                        class="scale-90 origin-right"
+                        :model-value="!isConfigDisabled(config)"
+                        @update:model-value="(val) => toggleConfig('claude', index, val)"
                       />
                     </div>
-                    <Button variant="ghost" size="icon" @click="openModal('claude', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg" @click="openModal('claude', index)">
                       <Pencil class="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('claude', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('claude', index)">
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
@@ -211,7 +216,7 @@
 
             <div v-else class="grid gap-4">
               <div v-for="(config, index) in codexConfigs" :key="index"
-                :class="['provider-card', isConfigDisabled(getExcludedModels(config)) ? 'opacity-60 grayscale-[0.5]' : '']">
+                :class="['provider-card', isConfigDisabled(config) ? 'opacity-60 grayscale-[0.5]' : '']">
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
@@ -222,12 +227,18 @@
                         <code class="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                           {{ maskKey(getApiKey(config)) }}
                         </code>
-                        <Badge v-if="isConfigDisabled(getExcludedModels(config))" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
+                        <Badge v-if="isConfigDisabled(config)" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
                       </div>
 
                        <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span v-if="config.prefix" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          前缀: {{ config.prefix }}
+                        </span>
                         <span v-if="getBaseUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           Base: {{ getBaseUrl(config) }}
+                        </span>
+                        <span v-if="getProxyUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          代理: {{ getProxyUrl(config) }}
                         </span>
                       </div>
 
@@ -246,17 +257,18 @@
                     </div>
                   </div>
 
-                  <div class="flex items-start gap-2">
-                    <div class="flex items-center mr-2">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center mr-1">
                       <Switch 
-                        :checked="!isConfigDisabled(getExcludedModels(config))"
-                        @update:checked="(val) => toggleConfig('codex', index, val)"
+                        class="scale-90 origin-right"
+                        :model-value="!isConfigDisabled(config)"
+                        @update:model-value="(val) => toggleConfig('codex', index, val)"
                       />
                     </div>
-                    <Button variant="ghost" size="icon" @click="openModal('codex', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg" @click="openModal('codex', index)">
                       <Pencil class="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('codex', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('codex', index)">
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
@@ -298,8 +310,14 @@
                       </div>
 
                        <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span v-if="config.prefix" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          前缀: {{ config.prefix }}
+                        </span>
                         <span class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           Base: {{ config.baseUrl || config['base-url'] || '默认' }}
+                        </span>
+                        <span v-if="getOpenAIProxyCount(config) > 0" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          代理: {{ getOpenAIProxyCount(config) }} 个
                         </span>
                         <span v-if="config.models?.length" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           {{ config.models.length }} 个模型映射
@@ -308,11 +326,11 @@
                     </div>
                   </div>
 
-                  <div class="flex items-start gap-2">
-                    <Button variant="ghost" size="icon" @click="openModal('openai', index)">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg" @click="openModal('openai', index)">
                       <Pencil class="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('openai', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('openai', index)">
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
@@ -342,7 +360,7 @@
 
             <div v-else class="grid gap-4">
               <div v-for="(config, index) in vertexConfigs" :key="index" 
-                :class="['provider-card', isConfigDisabled(getExcludedModels(config)) ? 'opacity-60 grayscale-[0.5]' : '']">
+                :class="['provider-card', isConfigDisabled(config) ? 'opacity-60 grayscale-[0.5]' : '']">
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400">
@@ -353,15 +371,18 @@
                         <code class="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                           {{ maskKey(getApiKey(config)) }}
                         </code>
-                        <Badge v-if="isConfigDisabled(getExcludedModels(config))" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
+                        <Badge v-if="isConfigDisabled(config)" variant="outline" class="text-xs bg-muted text-muted-foreground">已禁用</Badge>
                       </div>
 
-                       <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         <span v-if="config.prefix" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           前缀: {{ config.prefix }}
                         </span>
                         <span v-if="getBaseUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
                           Base: {{ getBaseUrl(config) }}
+                        </span>
+                        <span v-if="getProxyUrl(config)" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+                          代理: {{ getProxyUrl(config) }}
                         </span>
                       </div>
 
@@ -380,17 +401,18 @@
                     </div>
                   </div>
 
-                  <div class="flex items-start gap-2">
-                    <div class="flex items-center mr-2">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex items-center mr-1">
                       <Switch 
-                        :checked="!isConfigDisabled(getExcludedModels(config))"
-                        @update:checked="(val) => toggleConfig('vertex', index, val)"
+                        class="scale-90 origin-right"
+                        :model-value="!isConfigDisabled(config)"
+                        @update:model-value="(val) => toggleConfig('vertex', index, val)"
                       />
                     </div>
-                    <Button variant="ghost" size="icon" @click="openModal('vertex', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg" @click="openModal('vertex', index)">
                       <Pencil class="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('vertex', index)">
+                    <Button variant="ghost" size="icon" class="h-9 w-9 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10" @click="confirmDelete('vertex', index)">
                       <Trash2 class="w-4 h-4" />
                     </Button>
                   </div>
@@ -477,7 +499,7 @@
               </div>
 
               <div class="grid grid-cols-2 gap-4">
-                 <div v-if="['gemini', 'vertex'].includes(modalType)">
+                 <div v-if="['gemini', 'vertex', 'codex', 'claude'].includes(modalType)">
                   <label class="text-sm font-medium mb-1.5 block">Prefix (可选)</label>
                   <Input v-model="form.prefix" placeholder="模型名称前缀" />
                 </div>
@@ -491,7 +513,7 @@
                 </div>
               </div>
               
-              <div v-if="['gemini', 'vertex'].includes(modalType)">
+              <div v-if="['gemini', 'vertex', 'codex', 'claude'].includes(modalType)">
                  <label class="text-sm font-medium mb-1.5 block">Proxy URL (可选)</label>
                  <Input v-model="form.proxyUrl" placeholder="http://proxy:port" />
               </div>
@@ -537,9 +559,9 @@
                   <Input v-model="form.upstreamApiKey" placeholder="sk-..." type="password" />
                </div>
                <div class="flex items-center space-x-2 py-2">
-                  <Switch v-model:checked="form.forceModelMappings" id="force-map" />
+                  <Switch v-model="form.forceModelMappings" id="force-map" />
                   <label for="force-map" class="text-sm font-medium">强制启用模型映射</label>
-               </div>
+                </div>
                
                <div>
                  <div class="flex justify-between items-center mb-2">
@@ -584,6 +606,10 @@
         <div>
            <label class="text-sm font-medium mb-1.5 block">Base URL <span class="text-red-500">*</span></label>
            <Input v-model="form.baseUrl" placeholder="https://api.openai.com/v1" />
+        </div>
+        <div>
+          <label class="text-sm font-medium mb-1.5 block">Prefix (可选)</label>
+          <Input v-model="form.prefix" placeholder="模型名称前缀" />
         </div>
 
         <!-- API Keys List -->
@@ -1040,8 +1066,9 @@ const maskKey = (key: string) => {
   return `${key.slice(0, 4)}...${key.slice(-4)}`
 }
 
-const isConfigDisabled = (excluded: string[] | undefined) => {
-  return excluded && excluded.includes('*')
+const isConfigDisabled = (config: any) => {
+  if (!config) return false
+  return config.disabled === true || config['disabled'] === true || config.Disabled === true
 }
 
 const getOpenAIKeyCount = (config: any) => {
@@ -1051,6 +1078,25 @@ const getOpenAIKeyCount = (config: any) => {
   if (Array.isArray(config.apiKeys)) return config.apiKeys.length
   if (Array.isArray(config['api-keys'])) return config['api-keys'].length
   return 0
+}
+
+const getOpenAIProxyCount = (config: any) => {
+  const entries =
+    (Array.isArray(config?.['api-key-entries']) && config['api-key-entries']) ||
+    (Array.isArray(config?.apiKeyEntries) && config.apiKeyEntries) ||
+    (Array.isArray(config?.apiKeys) && config.apiKeys) ||
+    (Array.isArray(config?.['api-keys']) && config['api-keys']) ||
+    []
+
+  if (!Array.isArray(entries)) return 0
+
+  let count = 0
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') continue
+    const proxy = (entry as any)['proxy-url'] || (entry as any).proxyUrl
+    if (typeof proxy === 'string' && proxy.trim()) count++
+  }
+  return count
 }
 
 // Actions
@@ -1065,20 +1111,8 @@ const toggleConfig = async (type: string, index: number, enabled: boolean) => {
   else if (type === 'vertex') { list = [...vertexConfigs.value]; endpoint = '/vertex-api-key' }
   else return
 
-  const item = { ...list[index] }
-  // Backend uses 'excluded-models' (hyphenated)
-  let excluded = item['excluded-models'] || item.excludedModels || []
-  excluded = [...excluded]
-  
-  if (!enabled) {
-    if (!excluded.includes('*')) excluded.push('*')
-  } else {
-    excluded = excluded.filter(m => m !== '*')
-  }
-  
-  // Use hyphenated key for backend
-  item['excluded-models'] = excluded
-  delete item.excludedModels // Remove camelCase version if present
+  const disabled = !enabled
+  const item = { ...list[index], disabled }
   list[index] = item
   
   // Optimistic update
@@ -1088,7 +1122,7 @@ const toggleConfig = async (type: string, index: number, enabled: boolean) => {
   else if (type === 'vertex') vertexConfigs.value = list
 
   try {
-    await apiClient.put(endpoint, { items: list })
+    await apiClient.patch(endpoint, { index, value: { disabled } })
     toast({ title: enabled ? '已启用' : '已禁用' })
   } catch (e) {
     toast({ title: '操作失败', variant: 'destructive' })

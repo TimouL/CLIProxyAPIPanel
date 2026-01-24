@@ -54,6 +54,9 @@
                 <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:scale-110 transition-all duration-200" aria-label="凭证信息" title="凭证信息" @click="$emit('show-info')">
                   <Info class="h-3.5 w-3.5" />
                 </Button>
+                <Button v-if="canEditMetadata" variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:scale-110 transition-all duration-200" aria-label="快捷修改" title="快捷修改" @click="$emit('edit')">
+                  <Pencil class="h-3.5 w-3.5" />
+                </Button>
                 <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:scale-110 transition-all duration-200" aria-label="下载" @click="$emit('download', file.name)">
                   <Download class="h-3.5 w-3.5" />
                 </Button>
@@ -72,6 +75,14 @@
                 />
               </div>
             </div>
+          </div>
+          <div v-if="prefixLabel || proxyLabel" class="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span v-if="prefixLabel" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+              前缀: {{ prefixLabel }}
+            </span>
+            <span v-if="proxyLabel" class="flex items-center bg-background/50 px-1.5 py-0.5 rounded border border-border/50">
+              代理: {{ proxyLabel }}
+            </span>
           </div>
         </div>
       </div>
@@ -221,7 +232,8 @@ import {
   Box, 
   Zap,
   Bot,
-  Info
+  Info,
+  Pencil
 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import Switch from '@/components/ui/switch.vue'
@@ -241,6 +253,7 @@ const emit = defineEmits<{
   (e: 'delete', name: string): void
   (e: 'show-models'): void
   (e: 'show-info'): void
+  (e: 'edit'): void
   (e: 'toggle-disabled', payload: { file: AuthFileItem; disabled: boolean }): void
 }>()
 
@@ -282,6 +295,32 @@ const canToggleDisabled = computed(() => {
     return !(v === '1' || v === 'true' || v === 'yes' || v === 'on')
   }
   return !Boolean(raw)
+})
+
+const canEditMetadata = computed(() => {
+  if (!canToggleDisabled.value) return false
+  const name = (props.file.name || '').toString().toLowerCase()
+  return name.endsWith('.json')
+})
+
+const prefixLabel = computed(() => {
+  const raw = (props.file as any).prefix
+  if (typeof raw !== 'string') return ''
+  return raw.trim()
+})
+
+function maskProxyUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  const match = trimmed.match(/^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)([^@]+@)(.+)$/)
+  if (match) return `${match[1]}***@${match[3]}`
+  return trimmed
+}
+
+const proxyLabel = computed(() => {
+  const raw = (props.file as any).proxy_url ?? (props.file as any).proxyUrl
+  if (typeof raw !== 'string') return ''
+  return maskProxyUrl(raw)
 })
 
 function onToggleEnabled(enabled: boolean) {
