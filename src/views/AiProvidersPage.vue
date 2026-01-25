@@ -498,7 +498,7 @@
                 <Input v-model="form.sessionKey" placeholder="输入 Session Key (sk-ant-...)" />
               </div>
 
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div v-if="['gemini', 'vertex', 'codex', 'claude'].includes(modalType)">
                   <label class="text-sm font-medium mb-1.5 block">Prefix (可选)</label>
                   <Input v-model="form.prefix" placeholder="模型名称前缀" />

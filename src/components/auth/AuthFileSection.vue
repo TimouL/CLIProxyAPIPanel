@@ -50,7 +50,7 @@
     </div>
 
     <!-- Files Grid -->
-    <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div v-else class="grid gap-3 grid-cols-1 min-[450px]:grid-cols-2 min-[1300px]:grid-cols-3">
       <AuthFileCard
         v-for="file in displayFiles"
         :key="file.name"

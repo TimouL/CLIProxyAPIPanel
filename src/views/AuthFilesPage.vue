@@ -61,7 +61,7 @@
           <div class="h-6 w-32 rounded bg-muted animate-pulse"></div>
           <div class="h-5 w-8 rounded-full bg-muted animate-pulse"></div>
         </div>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-3 grid-cols-1 min-[450px]:grid-cols-2 min-[1300px]:grid-cols-3">
           <div v-for="j in 3" :key="j" class="rounded-xl border border-border bg-card p-5 shadow-sm h-48 animate-pulse">
             <div class="flex items-start justify-between mb-4">
               <div class="flex items-center gap-3 w-full">

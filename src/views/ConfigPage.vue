@@ -10,7 +10,7 @@
       </div>
 
       <!-- 标签页切换 -->
-      <div class="flex gap-1 mb-6 border-b border-border">
+      <div class="flex gap-1 mb-6 border-b border-border overflow-x-auto">
         <button
           v-for="tab in tabs"
           :key="tab.key"

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group relative flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20"
+    class="group relative flex flex-col rounded-xl border bg-card p-3 sm:p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20"
     :class="[
       themeClasses.bg,
       themeClasses.border
@@ -38,14 +38,14 @@
           </div>
           
           <!-- Second Row: Size, Date and Action Buttons -->
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{{ formatFileSize(file.size) }}</span>
-              <span class="w-0.5 h-0.5 rounded-full bg-muted-foreground/50" />
-              <span>{{ formatDate(file.modified ?? file.modtime ?? file.updated_at ?? file.created_at) }}</span>
+          <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <div class="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+              <span class="shrink-0">{{ formatFileSize(file.size) }}</span>
+              <span class="w-0.5 h-0.5 rounded-full bg-muted-foreground/50 shrink-0" />
+              <span class="truncate">{{ formatDate(file.modified ?? file.modtime ?? file.updated_at ?? file.created_at) }}</span>
             </div>
             
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
               <!-- Actions Buttons -->
               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                 <Button v-if="showQuota" variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:scale-110 transition-all duration-200" aria-label="支持模型" title="支持模型" @click="$emit('show-models')">

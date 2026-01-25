@@ -220,25 +220,25 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 gap-2 text-xs">
-                <div class="p-2 bg-muted/40 rounded-lg">
-                  <div class="text-muted-foreground mb-1">
+              <div class="grid grid-cols-1 min-[350px]:grid-cols-3 gap-2 text-xs">
+                <div class="p-2 bg-muted/40 rounded-lg flex flex-row xs:flex-col justify-between xs:justify-start items-center xs:items-stretch">
+                  <div class="text-muted-foreground mb-0 xs:mb-1">
                     使用次数
                   </div>
                   <div class="font-semibold">
                     {{ apiKey.usageCount.toLocaleString() }}
                   </div>
                 </div>
-                <div class="p-2 bg-muted/40 rounded-lg">
-                  <div class="text-muted-foreground mb-1">
+                <div class="p-2 bg-muted/40 rounded-lg flex flex-row xs:flex-col justify-between xs:justify-start items-center xs:items-stretch">
+                  <div class="text-muted-foreground mb-0 xs:mb-1">
                     最近使用
                   </div>
                   <div class="font-semibold">
                     {{ apiKey.lastUsedAt ? formatDate(apiKey.lastUsedAt) : '暂无' }}
                   </div>
                 </div>
-                <div class="p-2 bg-muted/40 rounded-lg">
-                  <div class="text-muted-foreground mb-1">
+                <div class="p-2 bg-muted/40 rounded-lg flex flex-row xs:flex-col justify-between xs:justify-start items-center xs:items-stretch">
+                  <div class="text-muted-foreground mb-0 xs:mb-1">
                     Token消耗
                   </div>
                   <div class="font-semibold">
