@@ -294,12 +294,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, provide, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide, reactive } from 'vue'
 import { apiClient } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useClipboard } from '@/composables/useClipboard'
 import { useQuotaStore } from '@/stores/quota'
 import { useAuthStatsStore } from '@/stores/authStats'
+import { useProxyEgressStore } from '@/stores/proxyEgress'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
@@ -307,6 +308,7 @@ import Button from '@/components/ui/button.vue'
 import Dialog from '@/components/ui/dialog/Dialog.vue'
 import Input from '@/components/ui/input.vue'
 import AuthFileSection from '@/components/auth/AuthFileSection.vue'
+import { proxyEgressSchedulerKey } from '@/composables/proxyEgressContext'
 import type { AuthFileItem, AuthFilesResponse } from '@/types'
 import {
   FileText,
@@ -322,6 +324,7 @@ const { toast } = useToast()
 const { copy } = useClipboard()
 const quotaStore = useQuotaStore()
 const authStatsStore = useAuthStatsStore()
+const proxyEgressStore = useProxyEgressStore()
 
 const loading = ref(true)
 const files = ref<AuthFileItem[]>([])
@@ -358,6 +361,21 @@ const editModal = reactive({
 // Refresh trigger for child cards - provide a reactive ref that contains files to refresh
 const refreshTrigger = ref<Set<string>>(new Set())
 provide('quotaRefreshTrigger', refreshTrigger)
+
+// Auto-probe scheduler for proxy egress badges (only currently mounted cards register themselves).
+const proxyEgressTargets = new Set<string>()
+let proxyEgressTimer: number | null = null
+provide(proxyEgressSchedulerKey, {
+  register: (id: string) => {
+    const trimmed = id.trim()
+    if (!trimmed) return
+    proxyEgressTargets.add(trimmed)
+    proxyEgressStore.probeAuto([trimmed])
+  },
+  unregister: (id: string) => {
+    proxyEgressTargets.delete(id.trim())
+  }
+})
 
 // Handle section refresh event
 async function handleSectionRefresh(filesToRefresh: AuthFileItem[]) {
@@ -718,5 +736,17 @@ function formatDate(dateValue?: number | string): string {
 onMounted(() => {
   fetchFiles()
   authStatsStore.loadStats()
+
+  proxyEgressTimer = window.setInterval(() => {
+    if (proxyEgressTargets.size === 0) return
+    proxyEgressStore.probeAuto(Array.from(proxyEgressTargets))
+  }, 10 * 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (proxyEgressTimer !== null) {
+    window.clearInterval(proxyEgressTimer)
+    proxyEgressTimer = null
+  }
 })
 </script>

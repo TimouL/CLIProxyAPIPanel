@@ -10,12 +10,14 @@
     <div>
       <div class="flex items-start gap-3">
         <!-- Type Badge -->
-        <div
+        <ProxyEgressIcon
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-sm"
           :style="{ backgroundColor: typeColor.bg, color: typeColor.text }"
+          :target-id="authIdKey"
+          :proxy-configured="Boolean(proxyLabel)"
         >
           <component :is="getIconForType(file.type)" class="h-5 w-5" />
-        </div>
+        </ProxyEgressIcon>
         
         <!-- File Info - Two Rows -->
         <div class="min-w-0 flex-1">
@@ -262,9 +264,10 @@ import {
   Info,
   Pencil
 } from 'lucide-vue-next'
-import Button from '@/components/ui/button.vue'
-import Switch from '@/components/ui/switch.vue'
-import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
+  import Button from '@/components/ui/button.vue'
+  import Switch from '@/components/ui/switch.vue'
+  import ProxyEgressIcon from '@/components/common/ProxyEgressIcon.vue'
+  import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
 import { TYPE_COLORS, formatQuotaResetTime, resolveCodexPlanType } from '@/utils/quota'
 import { useQuota } from '@/composables/useQuota'
 import { useAuthStatsStore } from '@/stores/authStats'
