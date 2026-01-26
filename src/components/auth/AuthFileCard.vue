@@ -40,16 +40,6 @@
           </div>
           
           <!-- Second Row: Size, Date and Action Buttons -->
-<<<<<<< HEAD
-          <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-            <div class="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-              <span class="shrink-0">{{ formatFileSize(file.size) }}</span>
-              <span class="w-0.5 h-0.5 rounded-full bg-muted-foreground/50 shrink-0" />
-              <span class="truncate">{{ formatDate(file.modified ?? file.modtime ?? file.updated_at ?? file.created_at) }}</span>
-            </div>
-            
-            <div class="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
-=======
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 text-xs text-muted-foreground min-w-0 flex-1 transition-opacity duration-200 group-hover:opacity-0">
               <span class="shrink-0 whitespace-nowrap">{{ formatFileSize(file.size) }}</span>
@@ -63,7 +53,6 @@
             </div>
             
             <div class="relative flex items-center gap-2 shrink-0">
->>>>>>> a5783d7 (fix(auth): 修复凭证卡片溢出与徽章布局)
               <!-- Actions Buttons -->
               <div class="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
                 <Button v-if="showQuota" variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:scale-110 transition-all duration-200" aria-label="支持模型" title="支持模型" @click="$emit('show-models')">
