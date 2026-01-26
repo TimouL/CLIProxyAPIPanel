@@ -10,6 +10,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   defaultOpen: false,
+  open: undefined,
   delayDuration: 200,
   disableHoverableContent: false
 })

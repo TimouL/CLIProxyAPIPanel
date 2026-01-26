@@ -180,7 +180,7 @@ onUnmounted(() => {
 <template>
   <TooltipProvider v-if="proxyConfigured">
     <Tooltip :disable-hoverable-content="false">
-      <TooltipTrigger asChild>
+      <TooltipTrigger as-child>
         <button v-bind="forwardedAttrs" type="button" :class="buttonClass" :style="(attrs as any).style" @click="onManualProbe">
           <slot />
 
