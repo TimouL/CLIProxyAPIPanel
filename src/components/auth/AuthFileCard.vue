@@ -239,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps, defineEmits, inject, watch, onMounted, type Ref } from 'vue'
+import { computed, inject, watch, onMounted, type Ref } from 'vue'
 import { 
   FileJson, 
   Download, 
