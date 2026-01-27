@@ -76,11 +76,18 @@
                 :key="`${model.name}-${model.alias ?? 'default'}`"
                 type="button"
                 class="inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/30 px-3 py-1.5 text-xs font-mono text-foreground hover:bg-secondary/60 hover:border-primary/40 transition-colors"
-                :title="model.description || model.alias || model.name"
+                :title="model.description || '点击复制模型 ID'"
                 @click="copyModelId(model.name)"
               >
                 <span class="font-semibold">{{ model.name }}</span>
-                <span v-if="model.alias" class="text-muted-foreground">{{ model.alias }}</span>
+                <span
+                  v-if="model.alias"
+                  class="text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="点击复制映射 ID"
+                  @click.stop="copyModelAlias(model.alias)"
+                >
+                  {{ model.alias }}
+                </span>
               </button>
             </div>
           </div>
@@ -258,13 +265,24 @@ async function fetchModels(opts: { forceRefresh?: boolean } = {}) {
   }
 }
 
-async function copyModelId(id: string) {
-  const ok = await copy(id)
+async function copyModelText(text: string, title: string) {
+  const trimmed = text.trim()
+  if (!trimmed) return
+
+  const ok = await copy(trimmed)
   if (ok) {
-    toast({ title: '已复制模型 ID', description: id })
+    toast({ title, description: trimmed })
   } else {
     toast({ title: '复制失败', variant: 'destructive' })
   }
+}
+
+async function copyModelId(id: string) {
+  await copyModelText(id, '已复制模型 ID')
+}
+
+async function copyModelAlias(alias: string) {
+  await copyModelText(alias, '已复制映射 ID')
 }
 
 onMounted(() => {
@@ -273,4 +291,3 @@ onMounted(() => {
   })
 })
 </script>
-
