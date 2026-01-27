@@ -288,6 +288,7 @@ import {
   Bot,
   FileText,
   Fingerprint,
+  Boxes,
   BarChart3,
   ScrollText,
   FileCode,
@@ -366,6 +367,7 @@ const navigation = computed(() => [
       { name: 'AI 提供商', href: '/ai-providers', icon: Bot },
       { name: '认证文件', href: '/auth-files', icon: FileText },
       { name: 'OAuth', href: '/oauth', icon: Fingerprint },
+      { name: '可用模型', href: '/models', icon: Boxes },
     ]
   },
   {
