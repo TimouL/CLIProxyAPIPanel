@@ -1,9 +1,12 @@
 <template>
   <div
-    class="group relative flex flex-col rounded-xl border bg-card p-3 sm:p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20"
+    class="group relative flex flex-col rounded-xl border bg-card p-3 sm:p-5 shadow-sm transition-all duration-300"
     :class="[
       themeClasses.bg,
-      themeClasses.border
+      themeClasses.border,
+      isDisabled
+        ? 'opacity-65 dark:opacity-80 grayscale-[0.6] dark:grayscale-[0.5] hover:shadow-sm hover:border-border/60'
+        : 'hover:shadow-md hover:border-primary/20'
     ]"
   >
     <!-- Header -->
