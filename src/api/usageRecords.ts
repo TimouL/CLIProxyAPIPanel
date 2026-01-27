@@ -11,6 +11,10 @@ export interface UsageRecord {
   api_key_masked: string
   model: string
   provider: string
+  upstream_provider?: string
+  upstream_api_key_masked?: string
+  upstream_candidate_count?: number
+  upstream_has_retry?: boolean
   is_streaming: boolean
   input_tokens: number
   output_tokens: number

@@ -61,7 +61,6 @@
     <!-- 请求详情抽屉 -->
     <RecordDetailDrawer
       :record="selectedRecord"
-      :request-trace="selectedRequestTrace"
       :loading="isLoadingDetail"
       @close="closeDetailDrawer"
     />
@@ -127,7 +126,6 @@ const availableProviders = ref<string[]>([])
 
 // 详情弹窗状态
 const selectedRecord = ref<UsageRecord | null>(null)
-const selectedRequestTrace = ref<any[]>([])
 const isLoadingDetail = ref(false)
 
 // 增强的模型统计（添加效率分析）
@@ -280,22 +278,6 @@ async function showRequestDetail(id: string) {
     // 获取详细记录
     const record = await usageRecordsApi.getById(parseInt(id))
     selectedRecord.value = record
-    
-    // 获取请求链路追踪数据
-    try {
-      const candidatesResult = await usageRecordsApi.getRequestCandidates(parseInt(id))
-      selectedRequestTrace.value = candidatesResult.candidates.map(candidate => ({
-        provider: candidate.provider,
-        api_key_masked: candidate.api_key_masked,
-        status_code: candidate.status_code,
-        success: candidate.success,
-        duration_ms: candidate.duration_ms,
-        error_message: candidate.error_message
-      }))
-    } catch (error) {
-      console.warn('获取请求链路追踪失败:', error)
-      selectedRequestTrace.value = []
-    }
   } catch (error) {
     console.error('加载请求详情失败:', error)
     warning('加载请求详情失败，请重试')
@@ -307,7 +289,6 @@ async function showRequestDetail(id: string) {
 // 关闭详情抽屉
 function closeDetailDrawer() {
   selectedRecord.value = null
-  selectedRequestTrace.value = []
 }
 
 // 自动刷新功能

@@ -1,9 +1,9 @@
 <template>
-  <div class="request-timeline">
+  <div class="minimal-request-timeline">
     <!-- Loading State -->
     <div v-if="loading" class="py-4">
       <div class="animate-pulse">
-        <div class="h-32 bg-muted/50 rounded-lg"></div>
+        <div class="h-32 bg-muted/50 rounded-lg" />
       </div>
     </div>
 
@@ -19,15 +19,17 @@
 
     <!-- Timeline Content -->
     <div
-      v-else-if="candidates && candidates.length > 0"
+      v-else-if="groupedTimeline.length > 0"
       class="bg-muted/30 rounded-lg border border-border/50 overflow-hidden"
     >
       <div class="p-6">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
-            <h4 class="text-sm font-semibold">请求链路追踪</h4>
-            <div 
+            <h4 class="text-sm font-semibold">
+              请求链路追踪
+            </h4>
+            <div
               class="px-2 py-1 rounded text-xs font-medium"
               :class="getFinalStatusClass()"
             >
@@ -39,74 +41,103 @@
           </div>
         </div>
 
-        <!-- Timeline Track -->
-        <div class="timeline-track">
+        <!-- Minimal Timeline Track (Grouped) -->
+        <div class="minimal-track">
           <div
-            v-for="(candidate, index) in candidates"
-            :key="candidate.id"
-            class="timeline-node"
+            v-for="(group, groupIndex) in groupedTimeline"
+            :key="`${group.id}-${group.startIndex}`"
+            class="minimal-node-group"
             :class="{
-              selected: selectedIndex === index,
-              hovered: hoveredIndex === index && selectedIndex !== index
+              selected: isGroupSelected(group),
+              hovered: isGroupHovered(groupIndex) && !isGroupSelected(group),
             }"
-            @mouseenter="hoveredIndex = index"
-            @mouseleave="hoveredIndex = null"
-            @click="selectedIndex = index"
+            @mouseenter="hoveredGroupIndex = groupIndex"
+            @mouseleave="hoveredGroupIndex = null"
+            @click="selectGroup(group)"
           >
             <!-- Node container -->
             <div class="node-container">
               <!-- Node label (above node) -->
               <div class="node-label">
-                {{ candidate.provider }}
+                {{ group.providerName }}
               </div>
 
-              <!-- Main node -->
+              <!-- Main node (represents the provider group) -->
               <div
                 class="node-dot"
-                :class="getStatusColorClass(candidate.status)"
+                :class="[
+                  getStatusColorClass(group.primaryStatus),
+                  { 'is-first-selected': isGroupSelected(group) && selectedAttemptIndex === 0 },
+                ]"
+                @click.stop="selectFirstAttempt(group)"
               />
 
-              <!-- Connection line -->
+              <!-- Sub nodes (retries within the same provider group) -->
               <div
-                v-if="index < candidates.length - 1"
-                class="node-line"
-              />
+                v-if="group.retryCount > 0 && isGroupSelected(group)"
+                class="sub-dots"
+              >
+                <button
+                  v-for="(attempt, idx) in group.allAttempts.slice(1)"
+                  :key="attempt.id"
+                  class="sub-dot"
+                  :class="[
+                    getStatusColorClass(attempt.status),
+                    { active: selectedAttemptIndex === idx + 1 },
+                  ]"
+                  :title="attempt.api_key_masked || `Key ${idx + 2}`"
+                  @click.stop="selectedAttemptIndex = idx + 1"
+                />
+              </div>
             </div>
+
+            <!-- Connection line -->
+            <div
+              v-if="groupIndex < groupedTimeline.length - 1"
+              class="node-line"
+            />
           </div>
         </div>
 
         <!-- Selected Details Panel -->
         <div
-          v-if="selectedCandidate"
-          class="detail-panel mt-6"
+          v-if="selectedGroup && currentAttempt"
+          class="detail-panel"
         >
           <div class="panel-header">
             <div class="panel-title">
               <span
                 class="title-dot"
-                :class="getStatusColorClass(selectedCandidate.status)"
+                :class="getStatusColorClass(currentAttempt.status)"
               />
-              <span class="title-text">{{ selectedCandidate.provider }}</span>
+              <span class="title-text">{{ selectedGroup.providerName }}</span>
               <span
                 class="status-tag"
-                :class="getStatusColorClass(selectedCandidate.status)"
+                :class="getStatusColorClass(currentAttempt.status)"
               >
-                {{ selectedCandidate.status_code || getStatusLabel(selectedCandidate.status) }}
+                {{ currentAttempt.status_code || getStatusLabel(currentAttempt.status) }}
+              </span>
+              <span
+                v-if="selectedGroup.retryCount > 0"
+                class="cache-hint"
+              >
+                {{ selectedAttemptIndex + 1 }}/{{ selectedGroup.allAttempts.length }}
               </span>
             </div>
+
             <div class="panel-nav">
               <button
                 class="nav-btn"
-                :disabled="selectedIndex === 0"
-                @click="navigateCandidate(-1)"
+                :disabled="selectedGroupIndex === 0"
+                @click="navigateGroup(-1)"
               >
                 <ChevronLeft class="w-4 h-4" />
               </button>
-              <span class="nav-info">{{ selectedIndex + 1 }} / {{ candidates.length }}</span>
+              <span class="nav-info">{{ selectedGroupIndex + 1 }} / {{ groupedTimeline.length }}</span>
               <button
                 class="nav-btn"
-                :disabled="selectedIndex === candidates.length - 1"
-                @click="navigateCandidate(1)"
+                :disabled="selectedGroupIndex === groupedTimeline.length - 1"
+                @click="navigateGroup(1)"
               >
                 <ChevronRight class="w-4 h-4" />
               </button>
@@ -117,34 +148,34 @@
             <!-- Core information grid -->
             <div class="info-grid">
               <div class="info-item">
-                <span class="info-label">API密钥</span>
+                <span class="info-label">凭证</span>
                 <span class="info-value">
-                  <code class="key-preview">{{ selectedCandidate.api_key_masked }}</code>
+                  <code class="key-preview">{{ currentAttempt.api_key_masked || '-' }}</code>
                 </span>
               </div>
               <div class="info-item">
                 <span class="info-label">耗时</span>
                 <span class="info-value highlight">
-                  {{ formatLatency(selectedCandidate.duration_ms) }}
+                  {{ formatLatency(currentAttempt.duration_ms) }}
                 </span>
               </div>
               <div class="info-item">
                 <span class="info-label">候选索引</span>
-                <span class="info-value">{{ selectedCandidate.candidate_index }}</span>
+                <span class="info-value">{{ currentAttempt.candidate_index }}</span>
               </div>
               <div class="info-item">
                 <span class="info-label">重试索引</span>
-                <span class="info-value">{{ selectedCandidate.retry_index }}</span>
+                <span class="info-value">{{ currentAttempt.retry_index }}</span>
               </div>
             </div>
 
             <!-- Error information -->
             <div
-              v-if="selectedCandidate.status === 'failed' && selectedCandidate.error_message"
+              v-if="currentAttempt.status === 'failed' && currentAttempt.error_message"
               class="error-block"
             >
               <div class="error-type">错误信息</div>
-              <div class="error-msg">{{ selectedCandidate.error_message }}</div>
+              <div class="error-msg">{{ currentAttempt.error_message }}</div>
             </div>
           </div>
         </div>
@@ -156,13 +187,15 @@
       v-else
       class="bg-muted/30 rounded-lg border border-border/50 border-dashed p-8 text-center"
     >
-      <p class="text-sm text-muted-foreground">暂无追踪数据</p>
+      <p class="text-sm text-muted-foreground">
+        暂无追踪数据
+      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { usageRecordsApi, type RequestCandidate } from '../../api/usageRecords'
 
@@ -171,31 +204,89 @@ const props = defineProps<{
   overrideStatusCode?: number
 }>()
 
-// State
+interface NodeGroup {
+  id: string
+  providerName: string
+  primary: RequestCandidate
+  primaryStatus: string
+  allAttempts: RequestCandidate[]
+  retryCount: number
+  startIndex: number
+  endIndex: number
+}
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 const candidates = ref<RequestCandidate[]>([])
-const selectedIndex = ref(0)
-const hoveredIndex = ref<number | null>(null)
+const selectedGroupIndex = ref(0)
+const selectedAttemptIndex = ref(0)
+const hoveredGroupIndex = ref<number | null>(null)
 
-// Computed
-const selectedCandidate = computed(() => {
-  return candidates.value[selectedIndex.value] || null
+const timeline = computed<RequestCandidate[]>(() => {
+  return [...candidates.value].sort((a, b) => {
+    if (a.candidate_index !== b.candidate_index) {
+      return a.candidate_index - b.candidate_index
+    }
+    return a.retry_index - b.retry_index
+  })
+})
+
+// Merge sequential attempts of the same provider into a group.
+const groupedTimeline = computed<NodeGroup[]>(() => {
+  if (!timeline.value.length) return []
+
+  const groups: NodeGroup[] = []
+  let current: NodeGroup | null = null
+
+  timeline.value.forEach((candidate, index) => {
+    const providerKey = candidate.provider || '未知'
+
+    if (current && current.id === providerKey) {
+      current.allAttempts.push(candidate)
+      current.retryCount += 1
+      current.endIndex = index
+      if (candidate.status === 'success' || candidate.success) {
+        current.primaryStatus = 'success'
+      }
+      return
+    }
+
+    current = {
+      id: providerKey,
+      providerName: providerKey,
+      primary: candidate,
+      primaryStatus: candidate.status,
+      allAttempts: [candidate],
+      retryCount: 0,
+      startIndex: index,
+      endIndex: index,
+    }
+    groups.push(current)
+  })
+
+  return groups
+})
+
+const selectedGroup = computed(() => {
+  return groupedTimeline.value[selectedGroupIndex.value] || null
+})
+
+const currentAttempt = computed(() => {
+  if (!selectedGroup.value) return null
+  return selectedGroup.value.allAttempts[selectedAttemptIndex.value] || selectedGroup.value.primary
 })
 
 const totalLatency = computed(() => {
-  if (!candidates.value.length) return 0
-  
-  // Use the successful candidate's duration, or the last candidate's duration
-  const successCandidate = candidates.value.find(c => c.success)
+  if (!timeline.value.length) return 0
+
+  const successCandidate = timeline.value.find(c => c.success || c.status === 'success')
   if (successCandidate) {
     return successCandidate.duration_ms
   }
-  
-  return candidates.value[candidates.value.length - 1]?.duration_ms || 0
+
+  return timeline.value[timeline.value.length - 1]?.duration_ms || 0
 })
 
-// Methods
 const formatLatency = (ms: number | undefined | null): string => {
   if (ms === undefined || ms === null) return '-'
   if (ms >= 1000) {
@@ -205,28 +296,24 @@ const formatLatency = (ms: number | undefined | null): string => {
 }
 
 const getFinalStatusClass = (): string => {
-  // Use override status code if provided
   if (props.overrideStatusCode !== undefined) {
-    return props.overrideStatusCode === 200 
+    return props.overrideStatusCode === 200
       ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300'
       : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'
   }
-  
-  // Check if any candidate succeeded
-  const hasSuccess = candidates.value.some(c => c.success)
+
+  const hasSuccess = timeline.value.some(c => c.success || c.status === 'success')
   return hasSuccess
     ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300'
     : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'
 }
 
 const getFinalStatusLabel = (): string => {
-  // Use override status code if provided
   if (props.overrideStatusCode !== undefined) {
     return props.overrideStatusCode === 200 ? '最终成功' : '最终失败'
   }
-  
-  // Check if any candidate succeeded
-  const hasSuccess = candidates.value.some(c => c.success)
+
+  const hasSuccess = timeline.value.some(c => c.success || c.status === 'success')
   return hasSuccess ? '最终成功' : '最终失败'
 }
 
@@ -235,7 +322,7 @@ const getStatusLabel = (status: string): string => {
     pending: '等待中',
     success: '成功',
     failed: '失败',
-    skipped: '跳过'
+    skipped: '跳过',
   }
   return labels[status] || status
 }
@@ -245,16 +332,45 @@ const getStatusColorClass = (status: string): string => {
     pending: 'status-pending',
     success: 'status-success',
     failed: 'status-failed',
-    skipped: 'status-skipped'
+    skipped: 'status-skipped',
   }
   return classes[status] || 'status-pending'
 }
 
-const navigateCandidate = (direction: number) => {
-  const newIndex = selectedIndex.value + direction
-  if (newIndex >= 0 && newIndex < candidates.value.length) {
-    selectedIndex.value = newIndex
-  }
+const isGroupHovered = (groupIndex: number) => {
+  return hoveredGroupIndex.value === groupIndex
+}
+
+const isGroupSelected = (group: NodeGroup) => {
+  return selectedGroupIndex.value === groupedTimeline.value.findIndex(g => g.id === group.id && g.startIndex === group.startIndex)
+}
+
+const selectGroup = (group: NodeGroup) => {
+  const index = groupedTimeline.value.findIndex(g => g.id === group.id && g.startIndex === group.startIndex)
+  if (index < 0) return
+
+  selectedGroupIndex.value = index
+
+  const successIdx = group.allAttempts.findIndex(a => a.success || a.status === 'success')
+  selectedAttemptIndex.value = successIdx >= 0 ? successIdx : group.allAttempts.length - 1
+}
+
+const selectFirstAttempt = (group: NodeGroup) => {
+  const index = groupedTimeline.value.findIndex(g => g.id === group.id && g.startIndex === group.startIndex)
+  if (index < 0) return
+
+  selectedGroupIndex.value = index
+  selectedAttemptIndex.value = 0
+}
+
+const navigateGroup = (direction: number) => {
+  const newIndex = selectedGroupIndex.value + direction
+  if (newIndex < 0 || newIndex >= groupedTimeline.value.length) return
+
+  selectedGroupIndex.value = newIndex
+  const group = groupedTimeline.value[newIndex]
+  const successIdx = group.allAttempts.findIndex(a => a.success || a.status === 'success')
+  selectedAttemptIndex.value = successIdx >= 0 ? successIdx : group.allAttempts.length - 1
 }
 
 const loadCandidates = async () => {
@@ -266,19 +382,6 @@ const loadCandidates = async () => {
   try {
     const result = await usageRecordsApi.getRequestCandidates(props.requestId)
     candidates.value = result.candidates || []
-    
-    // Auto-select the most meaningful candidate
-    if (candidates.value.length > 0) {
-      // Find successful candidate first
-      const successIndex = candidates.value.findIndex(c => c.success)
-      if (successIndex >= 0) {
-        selectedIndex.value = successIndex
-      } else {
-        // Find failed candidate
-        const failedIndex = candidates.value.findIndex(c => c.status === 'failed')
-        selectedIndex.value = failedIndex >= 0 ? failedIndex : candidates.value.length - 1
-      }
-    }
   } catch (err: any) {
     error.value = err.response?.data?.detail || err.message || '加载失败'
     console.error('Failed to load request candidates:', err)
@@ -287,38 +390,99 @@ const loadCandidates = async () => {
   }
 }
 
-// Watch for requestId changes
-watch(() => props.requestId, () => {
-  selectedIndex.value = 0
-  loadCandidates()
-}, { immediate: true })
+watch(
+  () => props.requestId,
+  () => {
+    selectedGroupIndex.value = 0
+    selectedAttemptIndex.value = 0
+    loadCandidates()
+  },
+  { immediate: true },
+)
 
-onMounted(() => {
-  loadCandidates()
-})
+// Auto-select the most meaningful group when trace updates.
+watch(
+  groupedTimeline,
+  (newGroups) => {
+    if (!newGroups.length) return
+
+    const successGroupIndex = newGroups.findIndex(g => g.allAttempts.some(a => a.success || a.status === 'success'))
+    if (successGroupIndex >= 0) {
+      selectedGroupIndex.value = successGroupIndex
+      const group = newGroups[successGroupIndex]
+      const attemptIdx = group.allAttempts.findIndex(a => a.success || a.status === 'success')
+      selectedAttemptIndex.value = attemptIdx >= 0 ? attemptIdx : 0
+      return
+    }
+
+    const pendingGroupIndex = newGroups.findIndex(g => g.allAttempts.some(a => a.status === 'pending'))
+    if (pendingGroupIndex >= 0) {
+      selectedGroupIndex.value = pendingGroupIndex
+      selectedAttemptIndex.value = newGroups[pendingGroupIndex].allAttempts.length - 1
+      return
+    }
+
+    for (let i = newGroups.length - 1; i >= 0; i--) {
+      const group = newGroups[i]
+      for (let j = group.allAttempts.length - 1; j >= 0; j--) {
+        if (group.allAttempts[j].status === 'failed') {
+          selectedGroupIndex.value = i
+          selectedAttemptIndex.value = j
+          return
+        }
+      }
+    }
+
+    selectedGroupIndex.value = newGroups.length - 1
+    selectedAttemptIndex.value = newGroups[newGroups.length - 1].allAttempts.length - 1
+  },
+  { immediate: true },
+)
 </script>
 
 <script lang="ts">
 export default {
-  name: 'RequestTimeline'
+  name: 'RequestTimeline',
 }
 </script>
 
 <style scoped>
-.request-timeline {
+.minimal-request-timeline {
   width: 100%;
 }
 
-/* Timeline track */
-.timeline-track {
+/* Minimal track - center when no overflow, scroll when overflow */
+.minimal-track {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 2rem 0;
+  justify-content: safe center;
+  gap: 64px;
+  padding: 2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
 }
 
-.timeline-node {
+.minimal-track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.minimal-track::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.minimal-track::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+.minimal-track::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+.minimal-node-group {
   display: flex;
   align-items: center;
   position: relative;
@@ -356,12 +520,10 @@ export default {
   z-index: 2;
   position: relative;
   cursor: pointer;
-  /* Outer ring */
   border: 2px solid currentColor;
   background: transparent;
 }
 
-/* Inner solid circle - using ::before pseudo-element */
 .node-dot::before {
   content: '';
   position: absolute;
@@ -374,12 +536,60 @@ export default {
   transform: translate(-50%, -50%);
 }
 
+.node-dot.is-first-selected {
+  transform: scale(1.1);
+}
+
+/* Sub nodes (retries) */
+.sub-dots {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+}
+
+.sub-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.5;
+  position: relative;
+  background: currentColor;
+}
+
+.sub-dot::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+}
+
+.sub-dot:hover {
+  transform: scale(1.2);
+  opacity: 0.9;
+}
+
+.sub-dot.active {
+  opacity: 1;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 3px currentColor;
+}
+
 /* Selected state: breathing animation + ripple effect */
-.timeline-node.selected .node-dot {
+.minimal-node-group.selected .node-dot {
   animation: breathe 2s ease-in-out infinite;
 }
 
-.timeline-node.selected .node-dot::after {
+.minimal-node-group.selected .node-dot::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -395,7 +605,7 @@ export default {
 }
 
 /* Hover state: scale effect only */
-.timeline-node.hovered .node-dot {
+.minimal-node-group.hovered .node-dot {
   transform: scale(1.3);
 }
 
@@ -419,18 +629,27 @@ export default {
 .node-dot.status-success { color: #22c55e; }
 .node-dot.status-failed { color: #ef4444; }
 .node-dot.status-pending { color: #3b82f6; }
-.node-dot.status-skipped { color: #1f2937; }
+.node-dot.status-skipped { color: hsl(var(--primary)); }
+
+.sub-dot.status-success { color: #22c55e; }
+.sub-dot.status-failed { color: #ef4444; }
+.sub-dot.status-pending { color: #3b82f6; }
+.sub-dot.status-skipped { color: hsl(var(--primary)); }
 
 .node-line {
+  position: absolute;
+  right: -64px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 64px;
   height: 2px;
   background: hsl(var(--border));
-  margin: 0 -1px;
   z-index: 1;
 }
 
 /* Details panel */
 .detail-panel {
+  margin-top: 1rem;
   background: hsl(var(--muted) / 0.3);
   border: 1px solid hsl(var(--border));
   border-radius: 14px;
@@ -441,7 +660,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0rem;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--muted) / 0.4);
 }
@@ -461,43 +680,11 @@ export default {
 .title-dot.status-success { background: #22c55e; }
 .title-dot.status-failed { background: #ef4444; }
 .title-dot.status-pending { background: #3b82f6; }
-.title-dot.status-skipped { background: #1f2937; }
+.title-dot.status-skipped { background: hsl(var(--primary)); }
 
 .title-text {
   font-weight: 600;
   font-size: 0.95rem;
-}
-
-.status-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 6px;
-  margin-left: 0.5rem;
-}
-
-.status-tag.status-success {
-  background: #22c55e20;
-  color: #16a34a;
-}
-
-.status-tag.status-failed {
-  background: #ef444420;
-  color: #dc2626;
-}
-
-.status-tag.status-pending {
-  background: #3b82f620;
-  color: #2563eb;
-}
-
-.status-tag.status-skipped {
-  background: #1f293720;
-  color: #1f2937;
 }
 
 .panel-nav {
@@ -541,7 +728,52 @@ export default {
 }
 
 .panel-body {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0rem;
+}
+
+/* Status tag */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  margin-left: 0.5rem;
+}
+
+.status-tag.status-success {
+  background: #22c55e20;
+  color: #16a34a;
+}
+
+.status-tag.status-failed {
+  background: #ef444420;
+  color: #dc2626;
+}
+
+.status-tag.status-pending {
+  background: #3b82f620;
+  color: #2563eb;
+}
+
+.status-tag.status-skipped {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+}
+
+.cache-hint {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 4px;
+  margin-left: 0.5rem;
 }
 
 .info-grid {
@@ -579,36 +811,37 @@ export default {
   color: hsl(var(--primary));
 }
 
-.key-preview {
-  font-size: 0.8rem;
-  padding: 0.1rem 0.3rem;
+.info-value code {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.375rem;
   background: hsl(var(--muted));
-  border-radius: 3px;
+  border-radius: 4px;
   color: hsl(var(--muted-foreground));
   font-family: ui-monospace, monospace;
 }
 
-/* Error information */
+/* Error block */
 .error-block {
   margin-top: 1rem;
-  padding: 0.875rem;
-  background: #ef444410;
-  border: 1px solid #ef444430;
-  border-radius: 8px;
+  padding: 0.75rem;
+  background: hsl(var(--destructive) / 0.05);
+  border: 1px solid hsl(var(--destructive) / 0.2);
+  border-radius: 10px;
 }
 
 .error-type {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: #ef4444;
-  margin-bottom: 0.25rem;
+  color: hsl(var(--destructive));
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
 }
 
 .error-msg {
-  font-size: 0.85rem;
-  color: #dc2626;
-  word-break: break-word;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: hsl(var(--destructive));
+  line-height: 1.4;
 }
 </style>
