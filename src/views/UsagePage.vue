@@ -24,9 +24,15 @@
       />
     </div>
 
+    <!-- KPI 概览 -->
+    <UsageKpiCards
+      :kpis="usageKpis"
+      :loading="isLoadingRecords"
+    />
+
     <!-- 请求详情 -->
     <UsageRecordsTable
-      :records="displayRecords"
+      :records="currentRecords"
       :loading="isLoadingRecords"
       :selected-period="selectedPeriod"
       :filter-search="filterSearch"
@@ -68,6 +74,7 @@ import { useToast } from '@/composables/useToast'
 import {
   ActivityHeatmapCard,
   IntervalTimelineCard,
+  UsageKpiCards,
   UsageModelTable,
   UsageProviderTable,
   UsageRecordsTable,
@@ -77,6 +84,7 @@ import {
   usageRecordsApi, 
   type UsageRecord, 
   type ActivityHeatmap,
+  type UsageKPIs,
   type ModelStats,
   type ProviderStats,
 } from '@/api/usageRecords'
@@ -111,6 +119,7 @@ const heatmapError = ref(false)
 const activityHeatmapData = ref<ActivityHeatmap | null>(null)
 const modelStats = ref<ModelStats[]>([])
 const providerStats = ref<ProviderStats[]>([])
+const usageKpis = ref<UsageKPIs | null>(null)
 const currentRecords = ref<UsageRecord[]>([])
 const totalRecords = ref(0)
 const availableModels = ref<string[]>([])
@@ -133,39 +142,6 @@ const enhancedModelStats = computed(() => {
     }
   })
 })
-
-// 前端筛选
-const filteredRecords = computed(() => {
-  let records = [...currentRecords.value]
-
-  if (filterModel.value !== '__all__') {
-    records = records.filter(record => record.model === filterModel.value)
-  }
-
-  if (filterProvider.value !== '__all__') {
-    records = records.filter(record => record.provider === filterProvider.value)
-  }
-
-  if (filterStatus.value !== '__all__') {
-    if (filterStatus.value === 'error') {
-      records = records.filter(record => !record.success)
-    } else if (filterStatus.value === 'success') {
-      records = records.filter(record => record.success)
-    }
-  }
-
-  return records
-})
-
-// 前端分页
-const paginatedRecords = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredRecords.value.slice(start, end)
-})
-
-// 显示的记录
-const displayRecords = computed(() => paginatedRecords.value)
 
 // 加载热力图数据
 async function loadHeatmapData() {
@@ -210,13 +186,16 @@ async function loadRecords(pagination: { page: number; pageSize: number }, filte
       page_size: pagination.pageSize,
       start_time: dateRange.start_time,
       end_time: dateRange.end_time,
+      include_kpis: true,
       ...filters
     })
 
     currentRecords.value = result.records || []
     totalRecords.value = result.total || 0
+    usageKpis.value = result.kpis || null
   } catch (error) {
     console.error('加载记录失败:', error)
+    usageKpis.value = null
   } finally {
     isLoadingRecords.value = false
   }
@@ -224,10 +203,18 @@ async function loadRecords(pagination: { page: number; pageSize: number }, filte
 
 // 获取当前筛选参数
 function getCurrentFilters() {
+  const status =
+    filterStatus.value === '__all__'
+      ? undefined
+      : filterStatus.value === 'success'
+        ? true
+        : false
+
   return {
     search: filterSearch.value.trim() || undefined,
     model: filterModel.value !== '__all__' ? filterModel.value : undefined,
     provider: filterProvider.value !== '__all__' ? filterProvider.value : undefined,
+    success: status,
   }
 }
 
@@ -264,16 +251,19 @@ async function handleFilterSearchChange(value: string) {
 async function handleFilterModelChange(value: string) {
   filterModel.value = value
   currentPage.value = 1
+  await loadRecords({ page: 1, pageSize: pageSize.value }, getCurrentFilters())
 }
 
 async function handleFilterProviderChange(value: string) {
   filterProvider.value = value
   currentPage.value = 1
+  await loadRecords({ page: 1, pageSize: pageSize.value }, getCurrentFilters())
 }
 
 async function handleFilterStatusChange(value: string) {
   filterStatus.value = value as FilterStatusValue
   currentPage.value = 1
+  await loadRecords({ page: 1, pageSize: pageSize.value }, getCurrentFilters())
 }
 
 // 刷新数据
