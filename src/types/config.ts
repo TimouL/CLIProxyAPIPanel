@@ -54,6 +54,7 @@ export interface Config {
   requestRetry?: number
   quotaExceeded?: QuotaExceededConfig
   usageStatisticsEnabled?: boolean
+  usageRecordsRetentionDays?: number
   requestLog?: boolean
   loggingToFile?: boolean
   logsMaxTotalSizeMb?: number
@@ -77,6 +78,7 @@ export type RawConfigSection =
   | 'request-retry'
   | 'quota-exceeded'
   | 'usage-statistics-enabled'
+  | 'usage-records-retention-days'
   | 'request-log'
   | 'logging-to-file'
   | 'logs-max-total-size-mb'
@@ -206,6 +208,7 @@ export type VisualConfigValues = {
   loggingToFile: boolean
   logsMaxTotalSizeMb: string
   usageStatisticsEnabled: boolean
+  usageRecordsRetentionDays: string
   proxyUrl: string
   forceModelPrefix: boolean
   requestRetry: string
@@ -255,6 +258,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   loggingToFile: false,
   logsMaxTotalSizeMb: '',
   usageStatisticsEnabled: false,
+  usageRecordsRetentionDays: '',
   proxyUrl: '',
   forceModelPrefix: false,
   requestRetry: '',

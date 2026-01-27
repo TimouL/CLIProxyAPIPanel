@@ -34,6 +34,7 @@ const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   loggingToFile: false,
   logsMaxTotalSizeMb: '',
   usageStatisticsEnabled: false,
+  usageRecordsRetentionDays: '',
   proxyUrl: '',
   forceModelPrefix: false,
   requestRetry: '',
@@ -213,6 +214,7 @@ export function useVisualConfig() {
         loggingToFile: Boolean(parsed['logging-to-file']),
         logsMaxTotalSizeMb: String(parsed['logs-max-total-size-mb'] || ''),
         usageStatisticsEnabled: Boolean(parsed['usage-statistics-enabled']),
+        usageRecordsRetentionDays: String(parsed['usage-records-retention-days'] ?? ''),
         
         // 网络配置
         proxyUrl: parsed['proxy-url'] || '',
@@ -343,6 +345,7 @@ export function useVisualConfig() {
       setBoolean(parsed, 'logging-to-file', values.loggingToFile)
       setIntFromString(parsed, 'logs-max-total-size-mb', values.logsMaxTotalSizeMb)
       setBoolean(parsed, 'usage-statistics-enabled', values.usageStatisticsEnabled)
+      setIntFromString(parsed, 'usage-records-retention-days', values.usageRecordsRetentionDays)
       setString(parsed, 'proxy-url', values.proxyUrl)
       setBoolean(parsed, 'force-model-prefix', values.forceModelPrefix)
       setIntFromString(parsed, 'request-retry', values.requestRetry)
