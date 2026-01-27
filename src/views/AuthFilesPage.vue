@@ -320,6 +320,7 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
+import { sortAuthFilesEnabledFirst } from '@/utils/authFiles'
 
 const { toast } = useToast()
 const { copy } = useClipboard()
@@ -412,19 +413,19 @@ const availableTypes = computed(() => {
 
 // Group files by type
 const antigravityFiles = computed(() => 
-  files.value.filter(f => f.type === 'antigravity')
+  sortAuthFilesEnabledFirst(files.value.filter(f => f.type === 'antigravity'))
 )
 
 const codexFiles = computed(() => 
-  files.value.filter(f => f.type === 'codex')
+  sortAuthFilesEnabledFirst(files.value.filter(f => f.type === 'codex'))
 )
 
 const geminiCliFiles = computed(() => 
-  files.value.filter(f => f.type === 'gemini-cli')
+  sortAuthFilesEnabledFirst(files.value.filter(f => f.type === 'gemini-cli'))
 )
 
 const otherFiles = computed(() => 
-  files.value.filter(f => !['antigravity', 'codex', 'gemini-cli'].includes(f.type || ''))
+  sortAuthFilesEnabledFirst(files.value.filter(f => !['antigravity', 'codex', 'gemini-cli'].includes(f.type || '')))
 )
 
 const filteredOtherFiles = computed(() => 
