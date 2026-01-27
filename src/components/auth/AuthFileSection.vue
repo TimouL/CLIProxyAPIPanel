@@ -122,14 +122,28 @@ const currentPage = ref(1)
 const itemsPerPage = 9 // 3 columns x 3 rows
 const refreshing = ref(false)
 
-// Reset page when files change
-watch(() => props.files, () => {
-  currentPage.value = 1
-})
-
 const totalPages = computed(() => 
   Math.max(1, Math.ceil(props.files.length / itemsPerPage))
 )
+
+function clampCurrentPage() {
+  const max = totalPages.value
+  if (currentPage.value < 1) currentPage.value = 1
+  if (currentPage.value > max) currentPage.value = max
+}
+
+// Keep the current page when files reorder (e.g. enable/disable) and only clamp when
+// the list size changes and would make the current page invalid.
+watch(() => props.files.length, () => {
+  clampCurrentPage()
+})
+
+// Switching back to paged view should never land on an invalid page.
+watch(viewMode, () => {
+  if (viewMode.value === 'paged') {
+    clampCurrentPage()
+  }
+})
 
 const displayFiles = computed(() => {
   if (viewMode.value === 'all') {
