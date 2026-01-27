@@ -301,6 +301,7 @@ import { useClipboard } from '@/composables/useClipboard'
 import { useQuotaStore } from '@/stores/quota'
 import { useAuthStatsStore } from '@/stores/authStats'
 import { useProxyEgressStore } from '@/stores/proxyEgress'
+import { useAuthFileModelsStore } from '@/stores/authFileModels'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
@@ -325,6 +326,7 @@ const { copy } = useClipboard()
 const quotaStore = useQuotaStore()
 const authStatsStore = useAuthStatsStore()
 const proxyEgressStore = useProxyEgressStore()
+const authFileModelsStore = useAuthFileModelsStore()
 
 const loading = ref(true)
 const files = ref<AuthFileItem[]>([])
@@ -463,6 +465,7 @@ async function fetchFiles() {
   try {
     const data = await apiClient.get<AuthFilesResponse>('/auth-files')
     files.value = data.files || []
+    authFileModelsStore.prune(files.value.map((f) => f.name))
   } catch {
     toast({ title: '加载认证文件失败', variant: 'destructive' })
   } finally {
@@ -480,6 +483,7 @@ async function handleFileUpload(event: Event) {
 
   try {
     await apiClient.postForm('/auth-files', formData)
+    authFileModelsStore.invalidate(file.name)
     toast({ title: '文件上传成功' })
     await fetchFiles()
   } catch {
@@ -509,6 +513,7 @@ async function deleteFile(name: string) {
   
   try {
     await apiClient.delete(`/auth-files?name=${encodeURIComponent(name)}`)
+    authFileModelsStore.invalidate(name)
     toast({ title: '文件已删除' })
     await fetchFiles()
   } catch {
@@ -553,25 +558,32 @@ async function toggleAuthFileDisabled(payload: { file: AuthFileItem; disabled: b
 // Show models modal - fetches from /auth-files/models API
 async function showModelsModal(file: AuthFileItem) {
   modelsModalOpen.value = true
-  modelsLoading.value = true
   modelsError.value = null
-  modelsList.value = []
   modelsFileName.value = file.name
 
+  const cached = authFileModelsStore.getCachedModels(file.name.trim())
+  if (cached) {
+    modelsList.value = cached
+    modelsLoading.value = false
+    return
+  }
+
+  modelsLoading.value = true
+  modelsList.value = []
+
   try {
-    const data = await apiClient.get<{ models: { id: string; display_name?: string; type?: string }[] }>(
-      `/auth-files/models?name=${encodeURIComponent(file.name)}`
-    )
-    const models = data?.models
-    if (Array.isArray(models)) {
-      modelsList.value = models
-    } else {
-      modelsList.value = []
-    }
+    const models = await authFileModelsStore.fetchModels(file.name)
+    modelsList.value = models
   } catch (err) {
     // Check for 404 (API not supported)
+    const status = (err as any)?.status as number | undefined
     const errorMessage = err instanceof Error ? err.message : ''
-    if (errorMessage.includes('404') || errorMessage.includes('not found') || errorMessage.includes('Not Found')) {
+    if (
+      status === 404 ||
+      errorMessage.includes('404') ||
+      errorMessage.includes('not found') ||
+      errorMessage.includes('Not Found')
+    ) {
       modelsError.value = '当前版本不支持此功能，请更新 CLI Proxy API'
     } else {
       modelsError.value = errorMessage || '获取模型列表失败'
@@ -683,6 +695,7 @@ async function saveEditModal() {
       })
     }
 
+    authFileModelsStore.invalidate(name)
     toast({ title: '保存成功' })
     closeEditModal()
     await fetchFiles()
