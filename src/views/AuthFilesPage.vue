@@ -50,6 +50,7 @@
           : 'border-transparent bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30'"
         @click="currentFilter = type"
       >
+        <ProviderLogo :provider="type" class="mr-1.5 h-3.5 w-3.5" />
         {{ type }}
       </button>
     </div>
@@ -309,6 +310,7 @@ import Button from '@/components/ui/button.vue'
 import Dialog from '@/components/ui/dialog/Dialog.vue'
 import Input from '@/components/ui/input.vue'
 import AuthFileSection from '@/components/auth/AuthFileSection.vue'
+import ProviderLogo from '@/components/common/ProviderLogo.vue'
 import { proxyEgressSchedulerKey } from '@/composables/proxyEgressContext'
 import type { AuthFileItem, AuthFilesResponse } from '@/types'
 import {

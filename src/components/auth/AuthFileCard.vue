@@ -19,7 +19,8 @@
           :target-id="authIdKey"
           :proxy-configured="Boolean(proxyLabel)"
         >
-          <component :is="getIconForType(file.type)" class="h-5 w-5" />
+          <ProviderLogo v-if="hasProviderLogo" :provider="file.type" class="h-5 w-5" />
+          <component v-else :is="getIconForType(file.type)" class="h-5 w-5" />
         </ProxyEgressIcon>
         
         <!-- File Info - Two Rows -->
@@ -259,6 +260,7 @@ import {
   import Button from '@/components/ui/button.vue'
   import Switch from '@/components/ui/switch.vue'
   import ProxyEgressIcon from '@/components/common/ProxyEgressIcon.vue'
+  import ProviderLogo from '@/components/common/ProviderLogo.vue'
   import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
 import { TYPE_COLORS, formatQuotaResetTime, resolveCodexPlanType } from '@/utils/quota'
 import { useQuota } from '@/composables/useQuota'
@@ -306,6 +308,18 @@ const codexPlanBadgeClass = computed(() => {
   if (!plan) return ''
   if (plan === 'free') return 'bg-muted text-muted-foreground'
   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+})
+
+const hasProviderLogo = computed(() => {
+  const provider = (props.file.type || '').toString().trim().toLowerCase()
+  return (
+    provider === 'antigravity' ||
+    provider === 'codex' ||
+    provider === 'claude' ||
+    provider === 'gemini-cli' ||
+    provider === 'qwen' ||
+    provider === 'iflow'
+  )
 })
 
 const isDisabled = computed(() => Boolean(props.file.disabled))
