@@ -149,7 +149,8 @@ const systemConfigValues = computed(() => ({
   commercialMode: props.values.commercialMode,
   loggingToFile: props.values.loggingToFile,
   usageStatisticsEnabled: props.values.usageStatisticsEnabled,
-  logsMaxTotalSizeMb: props.values.logsMaxTotalSizeMb
+  logsMaxTotalSizeMb: props.values.logsMaxTotalSizeMb,
+  usageRecordsRetentionDays: props.values.usageRecordsRetentionDays
 }))
 
 const networkConfigValues = computed(() => ({

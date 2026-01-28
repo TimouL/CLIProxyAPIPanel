@@ -1,5 +1,6 @@
 export { default as ActivityHeatmapCard } from './ActivityHeatmapCard.vue'
 export { default as IntervalTimelineCard } from './IntervalTimelineCard.vue'
+export { default as UsageKpiCards } from './UsageKpiCards.vue'
 export { default as UsageModelTable } from './UsageModelTable.vue'
 export { default as UsageProviderTable } from './UsageProviderTable.vue'
 export { default as UsageRecordsTable } from './UsageRecordsTable.vue'

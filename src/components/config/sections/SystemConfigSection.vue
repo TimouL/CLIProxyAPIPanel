@@ -62,6 +62,18 @@
             @update:model-value="updateValue('logsMaxTotalSizeMb', $event)"
           />
         </div>
+
+        <div>
+          <label class="block text-sm font-medium text-foreground mb-2">使用记录保留天数</label>
+          <Input
+            :model-value="values.usageRecordsRetentionDays"
+            type="number"
+            placeholder="30"
+            :disabled="disabled"
+            @update:model-value="updateValue('usageRecordsRetentionDays', $event)"
+          />
+          <p class="text-xs text-muted-foreground mt-1">默认 30 天，0 为无限制（不清理）</p>
+        </div>
       </div>
     </div>
   </ConfigSection>
@@ -77,6 +89,7 @@ interface SystemConfigValues {
   loggingToFile: boolean
   usageStatisticsEnabled: boolean
   logsMaxTotalSizeMb: string
+  usageRecordsRetentionDays: string
 }
 
 interface Props {

@@ -11,10 +11,16 @@ export interface UsageRecord {
   api_key_masked: string
   model: string
   provider: string
+  upstream_provider?: string
+  upstream_api_key_masked?: string
+  upstream_candidate_count?: number
+  upstream_has_retry?: boolean
   is_streaming: boolean
   input_tokens: number
   output_tokens: number
   total_tokens: number
+  cached_tokens?: number
+  reasoning_tokens?: number
   duration_ms: number
   status_code: number
   success: boolean
@@ -38,6 +44,7 @@ export interface UsageRecordsListQuery {
   search?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
+  include_kpis?: boolean
 }
 
 export interface UsageRecordsListResult {
@@ -46,11 +53,34 @@ export interface UsageRecordsListResult {
   page: number
   page_size: number
   total_pages: number
+  kpis?: UsageKPIs
 }
 
 export interface UsageRecordOptionsResult {
   models: string[]
   providers: string[]
+}
+
+export interface KPITrendPoint {
+  t: string
+  v: number
+}
+
+export interface UsageKPIs {
+  total_requests: number
+  success_requests: number
+  failure_requests: number
+  total_tokens: number
+  cached_tokens: number
+  reasoning_tokens: number
+  rpm: number
+  tpm: number
+  trend_bucket: 'hour' | 'day'
+  requests_trend: KPITrendPoint[]
+  tokens_trend: KPITrendPoint[]
+  rpm_trend: KPITrendPoint[]
+  tpm_trend: KPITrendPoint[]
+  generated_at: string
 }
 
 // Activity Heatmap types

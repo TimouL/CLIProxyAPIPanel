@@ -27,7 +27,7 @@
         <Input
           :model-value="filterSearch"
           @update:model-value="$emit('update:filterSearch', $event)"
-          placeholder="搜索密钥/模型"
+          placeholder="搜索密钥/模型/提供商"
           class="w-32 sm:w-48 h-8 text-xs border-border/60 pl-8"
         />
       </div>
@@ -110,6 +110,9 @@
           <TableHead class="h-12 font-semibold w-[140px]">
             模型
           </TableHead>
+          <TableHead class="h-12 font-semibold w-[160px]">
+            提供商/凭证
+          </TableHead>
           <TableHead class="h-12 font-semibold w-[50px] text-center">
             类型
           </TableHead>
@@ -124,7 +127,7 @@
       <TableBody>
         <TableRow v-if="records.length === 0">
           <TableCell
-            :colspan="6"
+            :colspan="7"
             class="text-center py-12 text-muted-foreground"
           >
             暂无请求记录
@@ -153,6 +156,35 @@
             :title="record.model"
           >
             <span class="truncate block">{{ record.model }}</span>
+          </TableCell>
+          <TableCell
+            class="py-4 w-[160px]"
+            :title="record.upstream_provider || record.provider || '-'"
+          >
+            <div class="flex flex-col text-xs gap-0.5">
+              <div class="flex items-center gap-1">
+                <span class="truncate capitalize">{{ record.upstream_provider || record.provider || '-' }}</span>
+                <Badge
+                  v-if="record.upstream_candidate_count && record.upstream_candidate_count > 1"
+                  variant="outline"
+                  class="h-4 px-1 text-[10px] leading-none border-border/60 text-muted-foreground"
+                  :title="`共 ${record.upstream_candidate_count} 次尝试`"
+                >
+                  ×{{ record.upstream_candidate_count }}
+                </Badge>
+              </div>
+              <span
+                v-if="record.upstream_api_key_masked"
+                class="text-muted-foreground truncate font-mono"
+                :title="record.upstream_api_key_masked"
+              >
+                {{ record.upstream_api_key_masked }}
+              </span>
+              <span
+                v-else
+                class="text-muted-foreground"
+              >-</span>
+            </div>
           </TableCell>
           <TableCell class="text-center py-4 w-[50px]">
             <Badge
