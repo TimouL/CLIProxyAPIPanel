@@ -21,7 +21,8 @@
       <Tabs v-model="activeTab" class="w-full">
         <TabsList class="w-full justify-start flex-wrap h-auto p-1 bg-muted/50 gap-1">
           <TabsTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value" class="flex items-center gap-2 px-4 py-2">
-            <component :is="tab.icon" class="w-4 h-4" />
+            <ProviderLogo v-if="tab.value === 'claude' || tab.value === 'codex'" :provider="tab.value" class="w-4 h-4" />
+            <component v-else :is="tab.icon" class="w-4 h-4" />
             {{ tab.label }}
             <Badge v-if="tab.count !== undefined" variant="secondary" class="ml-1 text-xs px-1.5 h-5 min-w-5">
               {{ tab.count }}
@@ -127,7 +128,7 @@
             </div>
 
             <div v-if="claudeConfigs.length === 0" class="empty-state">
-              <Bot class="w-12 h-12 text-muted-foreground/30 mb-4" />
+              <ProviderLogo provider="claude" class="w-12 h-12 text-muted-foreground/30 mb-4" />
               <p class="text-muted-foreground">暂无 Claude 配置</p>
               <Button variant="link" @click="openModal('claude')">立即添加</Button>
             </div>
@@ -138,7 +139,7 @@
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                      <Bot class="w-5 h-5" />
+                      <ProviderLogo provider="claude" class="w-5 h-5" />
                     </div>
                     <div class="space-y-1.5 flex-1 min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
@@ -209,7 +210,7 @@
             </div>
 
             <div v-if="codexConfigs.length === 0" class="empty-state">
-              <Code class="w-12 h-12 text-muted-foreground/30 mb-4" />
+              <ProviderLogo provider="codex" class="w-12 h-12 text-muted-foreground/30 mb-4" />
               <p class="text-muted-foreground">暂无 Codex 配置</p>
               <Button variant="link" @click="openModal('codex')">立即添加</Button>
             </div>
@@ -220,7 +221,7 @@
                 <div class="flex flex-col sm:flex-row justify-between gap-4">
                   <div class="flex items-start gap-4 flex-1">
                     <div class="provider-icon bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-                      <Code class="w-5 h-5" />
+                      <ProviderLogo provider="codex" class="w-5 h-5" />
                     </div>
                     <div class="space-y-1.5 flex-1 min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
@@ -749,6 +750,7 @@ import { useToast } from '@/composables/useToast'
 import PageContainer from '@/components/layout/PageContainer.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import CardSection from '@/components/layout/CardSection.vue'
+import ProviderLogo from '@/components/common/ProviderLogo.vue'
 import {
   Sparkles, Bot, Code, Cpu, Boxes, Plus, Pencil, Trash2, 
   Loader2, ArrowRight, X, Activity, Search
