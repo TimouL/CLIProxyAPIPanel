@@ -24,7 +24,14 @@
             <ProviderLogo v-if="tab.value === 'claude' || tab.value === 'codex'" :provider="tab.value" class="w-4 h-4" />
             <component v-else :is="tab.icon" class="w-4 h-4" />
             {{ tab.label }}
-            <Badge v-if="tab.count !== undefined" variant="secondary" class="ml-1 text-xs px-1.5 h-5 min-w-5">
+            <Badge
+              v-if="tab.count !== undefined"
+              variant="secondary"
+              :class="[
+                'ml-1 text-xs h-5 inline-flex items-center',
+                tab.count.includes('/') ? 'px-2.5 min-w-10 justify-center' : 'w-5 p-0 justify-center'
+              ]"
+            >
               {{ tab.count }}
             </Badge>
           </TabsTrigger>
@@ -905,13 +912,18 @@ const selectedDiscoveryCount = computed(() => {
 
 // -- Computed --
 const countEnabled = (items: any[]) => items.filter((item) => !isConfigDisabled(item)).length
+const formatEnabledTotal = (items: any[]) => {
+  const total = items.length
+  if (total === 0) return '0'
+  return `${countEnabled(items)}/${total}`
+}
 
 const tabs = computed(() => [
-  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: `${countEnabled(openaiConfigs.value)}/${openaiConfigs.value.length}` },
-  { value: 'gemini', label: 'Gemini', icon: Sparkles, count: `${countEnabled(geminiKeys.value)}/${geminiKeys.value.length}` },
-  { value: 'claude', label: 'Claude', icon: Bot, count: `${countEnabled(claudeConfigs.value)}/${claudeConfigs.value.length}` },
-  { value: 'codex', label: 'Codex', icon: Code, count: `${countEnabled(codexConfigs.value)}/${codexConfigs.value.length}` },
-  { value: 'vertex', label: 'Vertex', icon: Boxes, count: `${countEnabled(vertexConfigs.value)}/${vertexConfigs.value.length}` },
+  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: formatEnabledTotal(openaiConfigs.value) },
+  { value: 'gemini', label: 'Gemini', icon: Sparkles, count: formatEnabledTotal(geminiKeys.value) },
+  { value: 'claude', label: 'Claude', icon: Bot, count: formatEnabledTotal(claudeConfigs.value) },
+  { value: 'codex', label: 'Codex', icon: Code, count: formatEnabledTotal(codexConfigs.value) },
+  { value: 'vertex', label: 'Vertex', icon: Boxes, count: formatEnabledTotal(vertexConfigs.value) },
   { value: 'ampcode', label: 'Ampcode', icon: Activity }
 ])
 

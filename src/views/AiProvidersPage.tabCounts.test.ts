@@ -63,7 +63,7 @@ describe('AiProvidersPage tab count badges', () => {
           Textarea: { template: '<textarea />' },
           Checkbox: { template: '<input type="checkbox" />' },
           Button: { template: '<button><slot /></button>' },
-          Badge: { template: '<span><slot /></span>' },
+          Badge: { template: '<span data-badge v-bind="$attrs"><slot /></span>' },
           Skeleton: { template: '<div />' },
           Switch: { template: '<input type="checkbox" />' },
           Tabs: { template: '<div><slot /></div>' },
@@ -77,11 +77,28 @@ describe('AiProvidersPage tab count badges', () => {
     await flush()
     await flush()
 
-    expect(wrapper.find('button[data-value="gemini"]').text()).toContain('1/2')
-    expect(wrapper.find('button[data-value="openai"]').text()).toContain('2/2')
-    expect(wrapper.find('button[data-value="claude"]').text()).toContain('0/1')
+    const geminiTab = wrapper.find('button[data-value="gemini"]')
+    const openaiTab = wrapper.find('button[data-value="openai"]')
+    const claudeTab = wrapper.find('button[data-value="claude"]')
+    const codexTab = wrapper.find('button[data-value="codex"]')
+
+    expect(geminiTab.text()).toContain('1/2')
+    expect(openaiTab.text()).toContain('2/2')
+    expect(claudeTab.text()).toContain('0/1')
+
+    // When total is 0, display should be just "0" (not "0/0") and keep circular badge style.
+    expect(codexTab.text()).toContain('0')
+    expect(codexTab.text()).not.toContain('0/0')
+
+    const geminiBadge = geminiTab.find('[data-badge]')
+    expect(geminiBadge.text()).toBe('1/2')
+    expect(geminiBadge.classes()).toContain('min-w-10')
+
+    const codexBadge = codexTab.find('[data-badge]')
+    expect(codexBadge.text()).toBe('0')
+    expect(codexBadge.classes()).toContain('w-5')
+    expect(codexBadge.classes()).toContain('p-0')
 
     wrapper.unmount()
   })
 })
-
