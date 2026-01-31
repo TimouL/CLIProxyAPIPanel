@@ -904,12 +904,14 @@ const selectedDiscoveryCount = computed(() => {
 })
 
 // -- Computed --
+const countEnabled = (items: any[]) => items.filter((item) => !isConfigDisabled(item)).length
+
 const tabs = computed(() => [
-  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: openaiConfigs.value.length },
-  { value: 'gemini', label: 'Gemini', icon: Sparkles, count: geminiKeys.value.length },
-  { value: 'claude', label: 'Claude', icon: Bot, count: claudeConfigs.value.length },
-  { value: 'codex', label: 'Codex', icon: Code, count: codexConfigs.value.length },
-  { value: 'vertex', label: 'Vertex', icon: Boxes, count: vertexConfigs.value.length },
+  { value: 'openai', label: 'OpenAI 兼容', icon: Cpu, count: `${countEnabled(openaiConfigs.value)}/${openaiConfigs.value.length}` },
+  { value: 'gemini', label: 'Gemini', icon: Sparkles, count: `${countEnabled(geminiKeys.value)}/${geminiKeys.value.length}` },
+  { value: 'claude', label: 'Claude', icon: Bot, count: `${countEnabled(claudeConfigs.value)}/${claudeConfigs.value.length}` },
+  { value: 'codex', label: 'Codex', icon: Code, count: `${countEnabled(codexConfigs.value)}/${codexConfigs.value.length}` },
+  { value: 'vertex', label: 'Vertex', icon: Boxes, count: `${countEnabled(vertexConfigs.value)}/${vertexConfigs.value.length}` },
   { value: 'ampcode', label: 'Ampcode', icon: Activity }
 ])
 
@@ -1076,7 +1078,7 @@ const maskKey = (key: string) => {
   return `${key.slice(0, 4)}...${key.slice(-4)}`
 }
 
-const isConfigDisabled = (config: any) => {
+function isConfigDisabled(config: any) {
   if (!config) return false
   return config.disabled === true || config['disabled'] === true || config.Disabled === true
 }
