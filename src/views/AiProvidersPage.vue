@@ -786,6 +786,10 @@ interface OpenAIConfig {
 }
 
 interface AmpcodeConfig {
+  'upstream-url'?: string
+  'upstream-api-key'?: string
+  'force-model-mappings'?: boolean
+  'model-mappings'?: Array<{ from: string, to: string }>
   upstreamUrl?: string
   upstreamApiKey?: string
   forceModelMappings?: boolean
@@ -943,7 +947,10 @@ const fetchData = async () => {
     if (cx.status === 'fulfilled') codexConfigs.value = cx.value['codex-api-key'] || []
     if (o.status === 'fulfilled') openaiConfigs.value = o.value['openai-compatibility'] || []
     if (v.status === 'fulfilled') vertexConfigs.value = v.value['vertex-api-key'] || [] // Assuming endpoint structure
-    if (a.status === 'fulfilled') ampcodeConfig.value = a.value as AmpcodeConfig
+    if (a.status === 'fulfilled') {
+      const data: any = a.value
+      ampcodeConfig.value = (data?.ampcode ?? data) as AmpcodeConfig
+    }
     
     // Load Stats independently to not block UI
     loadStats()
@@ -1137,7 +1144,7 @@ const toggleConfig = async (type: string, index: number, enabled: boolean) => {
 const openModal = (type: string, index = -1) => {
   modalType.value = type
   editIndex.value = index
-  isEditing.value = index !== -1
+  isEditing.value = type === 'ampcode' || index !== -1
   
   // Reset Form
   form.apiKey = ''
@@ -1209,15 +1216,15 @@ const openModal = (type: string, index = -1) => {
       }
 
       // Ampcode Specific - backend uses hyphenated keys
-      if (type === 'ampcode') {
-        form.upstreamUrl = item['upstream-url'] || item.upstreamUrl || ''
-        form.upstreamApiKey = item['upstream-api-key'] || item.upstreamApiKey || ''
-        form.forceModelMappings = !!(item['force-model-mappings'] || item.forceModelMappings)
-        const mappings = item['model-mappings'] || item.modelMappings || []
-        form.ampcodeMappings = mappings.length ? [...mappings] : []
-      }
+    if (type === 'ampcode') {
+      form.upstreamUrl = item['upstream-url'] || item.upstreamUrl || ''
+      form.upstreamApiKey = item['upstream-api-key'] || item.upstreamApiKey || ''
+      form.forceModelMappings = !!(item['force-model-mappings'] || item.forceModelMappings)
+      const mappings = item['model-mappings'] || item.modelMappings || []
+      form.ampcodeMappings = mappings.length ? [...mappings] : []
     }
   }
+}
 
   modalOpen.value = true
 }
@@ -1357,14 +1364,11 @@ const handleSave = async () => {
       : []
 
     if (modalType.value === 'ampcode') {
-      // Use hyphenated keys for backend compatibility
-      const payload: Record<string, any> = {
-        'upstream-url': form.upstreamUrl,
-        'upstream-api-key': form.upstreamApiKey,
-        'force-model-mappings': form.forceModelMappings,
-        'model-mappings': form.ampcodeMappings.filter(m => m.from && m.to)
-      }
-      await apiClient.put('/ampcode', payload)
+      const mappings = form.ampcodeMappings.filter(m => m.from && m.to)
+      await apiClient.put('/ampcode/upstream-url', { value: form.upstreamUrl })
+      await apiClient.put('/ampcode/upstream-api-key', { value: form.upstreamApiKey })
+      await apiClient.put('/ampcode/force-model-mappings', { value: form.forceModelMappings })
+      await apiClient.put('/ampcode/model-mappings', { value: mappings })
     } else {
       let list = [] as any[]
       let endpoint = ''
