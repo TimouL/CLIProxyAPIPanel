@@ -165,7 +165,7 @@
 
       <!-- Antigravity Quota -->
       <div v-else-if="file.type === 'antigravity' && quotaState?.status === 'success'" class="space-y-3">
-        <div v-for="group in quotaState.groups" :key="group.id">
+        <div v-for="group in antigravityGroups" :key="group.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ group.label }}</span>
              <div class="flex items-center gap-2">
@@ -181,14 +181,14 @@
              ></div>
            </div>
         </div>
-        <div v-if="quotaState.groups.length === 0" class="text-xs text-muted-foreground text-center py-2">
+        <div v-if="antigravityGroups.length === 0" class="text-xs text-muted-foreground text-center py-2">
           暂无配额信息
         </div>
       </div>
 
       <!-- Codex Quota -->
       <div v-else-if="file.type === 'codex' && quotaState?.status === 'success'" class="space-y-3">
-        <div v-for="win in quotaState.windows" :key="win.id">
+        <div v-for="win in codexWindows" :key="win.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ win.label }}</span>
              <div class="flex items-center gap-2">
@@ -209,7 +209,7 @@
 
       <!-- Gemini CLI Quota -->
       <div v-else-if="file.type === 'gemini-cli' && quotaState?.status === 'success'" class="space-y-3">
-         <div v-for="bucket in quotaState.buckets" :key="bucket.id">
+         <div v-for="bucket in geminiBuckets" :key="bucket.id">
            <div class="flex justify-between text-xs mb-1">
              <span class="text-foreground/80">{{ bucket.label }}</span>
              <div class="flex items-center gap-2">
@@ -283,6 +283,27 @@ const emit = defineEmits<{
 
 const { quotaState, loading, loadQuota, resetQuota } = useQuota(props.file)
 
+const antigravityGroups = computed(() => {
+  const state = quotaState.value
+  if (props.file.type !== 'antigravity') return []
+  if (!state || !('groups' in state)) return []
+  return state.groups
+})
+
+const codexWindows = computed(() => {
+  const state = quotaState.value
+  if (props.file.type !== 'codex') return []
+  if (!state || !('windows' in state)) return []
+  return state.windows
+})
+
+const geminiBuckets = computed(() => {
+  const state = quotaState.value
+  if (props.file.type !== 'gemini-cli') return []
+  if (!state || !('buckets' in state)) return []
+  return state.buckets
+})
+
 const codexPlanType = computed(() => {
   const provider = (props.file.type || '').toString().toLowerCase()
   if (provider !== 'codex') return null
@@ -330,7 +351,7 @@ const canToggleDisabled = computed(() => {
     const v = raw.trim().toLowerCase()
     return !(v === '1' || v === 'true' || v === 'yes' || v === 'on')
   }
-  return !Boolean(raw)
+  return !raw
 })
 
 const canEditMetadata = computed(() => {
@@ -364,7 +385,7 @@ function onToggleEnabled(enabled: boolean) {
 }
 
 // Subscribe to batch refresh trigger from parent
-const refreshTrigger = inject<Ref<Set<string>>>('quotaRefreshTrigger', undefined)
+const refreshTrigger = inject<Ref<Set<string>>>('quotaRefreshTrigger')
 
 if (refreshTrigger) {
   watch(refreshTrigger, (newTrigger) => {
