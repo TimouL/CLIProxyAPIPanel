@@ -654,7 +654,8 @@ export function useQuota(file: AuthFileItem) {
       header: requestHeader
     })
 
-    if (res.statusCode < 200 || res.statusCode >= 300) {
+    const statusCode = resolveApiCallStatusCode(res)
+    if (statusCode < 200 || statusCode >= 300) {
       handleError(res)
       return
     }
@@ -697,7 +698,8 @@ export function useQuota(file: AuthFileItem) {
       data: JSON.stringify({ project: projectId })
     })
 
-    if (res.statusCode < 200 || res.statusCode >= 300) {
+    const statusCode = resolveApiCallStatusCode(res)
+    if (statusCode < 200 || statusCode >= 300) {
       handleError(res)
       return
     }
@@ -767,7 +769,7 @@ export function useQuota(file: AuthFileItem) {
         ...currentState,
         status: 'error',
         error: getApiCallErrorMessage(res),
-        errorStatus: res.statusCode
+        errorStatus: resolveApiCallStatusCode(res)
       })
     }
   }

@@ -159,7 +159,9 @@ export interface ApiCallRequest {
 }
 
 export interface ApiCallResponse {
-  statusCode: number
+  statusCode?: number
+  status_code?: number
+  header?: Record<string, string[]>
   body?: unknown
   bodyText?: string
   error?: string
