@@ -3,6 +3,7 @@ import type {
   TypeColorSet,
   GeminiCliQuotaGroupDefinition,
   AntigravityQuotaGroupDefinition,
+  AntigravitySubscriptionTier,
   AuthFileItem
 } from '@/types'
 import dayjs from 'dayjs'
@@ -63,6 +64,12 @@ export const ANTIGRAVITY_QUOTA_URLS = [
   'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
   'https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels',
   'https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels'
+]
+
+export const ANTIGRAVITY_LOAD_CODE_ASSIST_URLS = [
+  'https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist',
+  'https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:loadCodeAssist',
+  'https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist'
 ]
 
 export const ANTIGRAVITY_REQUEST_HEADERS = {
@@ -139,6 +146,48 @@ export function normalizeStringValue(val: unknown): string | null {
 }
 
 // =====================
+// Antigravity Subscription Tier
+// =====================
+
+function normalizeAntigravitySubscriptionTierId(value: unknown): AntigravitySubscriptionTier | null {
+  const raw = normalizeStringValue(value)
+  if (!raw) return null
+
+  const normalized = raw.trim().toUpperCase()
+  if (!normalized) return null
+
+  if (normalized.includes('ULTRA')) return 'ultra'
+  if (normalized.includes('PRO')) return 'pro'
+  if (normalized.includes('FREE')) return 'free'
+
+  return null
+}
+
+export function resolveAntigravitySubscriptionTierFromLoadCodeAssist(
+  data: unknown
+): AntigravitySubscriptionTier | null {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null
+  const obj = data as Record<string, unknown>
+
+  const paidTier = obj.paid_tier ?? obj.paidTier
+  const currentTier = obj.current_tier ?? obj.currentTier
+
+  const paidTierId =
+    paidTier && typeof paidTier === 'object' && !Array.isArray(paidTier)
+      ? (paidTier as Record<string, unknown>).id
+      : undefined
+  const currentTierId =
+    currentTier && typeof currentTier === 'object' && !Array.isArray(currentTier)
+      ? (currentTier as Record<string, unknown>).id
+      : undefined
+
+  return (
+    normalizeAntigravitySubscriptionTierId(paidTierId) ??
+    normalizeAntigravitySubscriptionTierId(currentTierId)
+  )
+}
+
+// =====================
 // Validators
 // =====================
 
@@ -181,6 +230,28 @@ export function formatQuotaResetTime(dateStr?: string): string {
     return d.format('M/D HH:mm')
   }
   return d.format('YYYY/MM/DD')
+}
+
+export function formatResetCountdown(dateStr?: string | null, nowMs: number = Date.now()): string {
+  if (!dateStr) return ''
+
+  const d = dayjs(dateStr)
+  if (!d.isValid()) return ''
+
+  const diffMs = Math.max(d.valueOf() - nowMs, 0)
+  const minuteMs = 60 * 1000
+  const hourMs = 60 * minuteMs
+  const dayMs = 24 * hourMs
+
+  if (diffMs >= dayMs) {
+    const days = Math.floor(diffMs / dayMs)
+    const hours = Math.floor((diffMs % dayMs) / hourMs)
+    return `${days}d ${hours}h`
+  }
+
+  const hours = Math.floor(diffMs / hourMs)
+  const minutes = Math.floor((diffMs % hourMs) / minuteMs)
+  return `${hours}h ${minutes}m`
 }
 
 export function formatUnixSeconds(val: number | null): string {

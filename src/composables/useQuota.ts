@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import type {
   AuthFileItem,
   AntigravityQuotaState,
+  AntigravitySubscriptionTier,
   CodexQuotaState,
   GeminiCliQuotaState,
   ApiCallResponse,
@@ -20,6 +21,7 @@ import { apiCallApi, getApiCallErrorMessage } from '@/api/apiCall'
 import { apiClient } from '@/api/client'
 import {
   ANTIGRAVITY_QUOTA_URLS,
+  ANTIGRAVITY_LOAD_CODE_ASSIST_URLS,
   ANTIGRAVITY_REQUEST_HEADERS,
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
@@ -34,7 +36,9 @@ import {
   GEMINI_CLI_GROUPS,
   resolveCodexChatgptAccountId,
   resolveGeminiCliProjectId,
+  resolveAntigravitySubscriptionTierFromLoadCodeAssist,
   resolveCodexPlanType,
+  formatResetCountdown,
   formatCodexResetLabel,
   isIgnoredGeminiCliModel
 } from '@/utils/quota'
@@ -97,6 +101,16 @@ function parseGeminiCliQuotaPayload(payload: unknown): GeminiCliQuotaPayload | n
 function normalizePlanType(value: unknown): string | null {
   const normalized = normalizeStringValue(value)
   return normalized ? normalized.toLowerCase() : null
+}
+
+function resolveApiCallStatusCode(res: ApiCallResponse): number {
+  const anyRes = res as unknown as {
+    statusCode?: unknown
+    status_code?: unknown
+  }
+  if (typeof anyRes.statusCode === 'number') return anyRes.statusCode
+  if (typeof anyRes.status_code === 'number') return anyRes.status_code
+  return 0
 }
 
 // =====================
@@ -202,6 +216,7 @@ function findAntigravityModel(
 function buildAntigravityQuotaGroups(models: AntigravityModelsPayload): AntigravityQuotaGroup[] {
   const groups: AntigravityQuotaGroup[] = []
   let geminiProResetTime: string | undefined
+  const nowMs = Date.now()
 
   for (const def of ANTIGRAVITY_GROUPS) {
     const matches = def.identifiers
@@ -238,12 +253,15 @@ function buildAntigravityQuotaGroups(models: AntigravityModelsPayload): Antigrav
     // For image group, use gemini-pro reset time if not available
     const finalResetTime = def.id === 'gemini-image' ? (resetTime ?? geminiProResetTime) : resetTime
 
+    const resetCountdown = finalResetTime ? formatResetCountdown(finalResetTime, nowMs) : ''
+
     groups.push({
       id: def.id,
       label,
       models: quotaEntries.map((entry) => entry.id),
       remainingFraction,
-      resetTime: finalResetTime
+      resetTime: finalResetTime,
+      resetCountdown: resetCountdown || undefined
     })
   }
 
@@ -411,6 +429,13 @@ export function useQuota(file: AuthFileItem) {
   }
 
   const loadQuota = async () => {
+    const rawDisabled = (file as Record<string, unknown>)['disabled']
+    const isDisabled =
+      typeof rawDisabled === 'string'
+        ? ['1', 'true', 'yes', 'on'].includes(rawDisabled.trim().toLowerCase())
+        : Boolean(rawDisabled)
+    if (isDisabled) return
+
     // Support both camelCase and snake_case field names
     const rawAuthIndex = file.authIndex ?? (file as Record<string, unknown>)['auth_index']
     if (!rawAuthIndex) return
@@ -457,6 +482,47 @@ export function useQuota(file: AuthFileItem) {
   }
 
   /**
+   * Antigravity subscription tier: POST to loadCodeAssist (best-effort)
+   * Response: { paid_tier: { id }, current_tier: { id } } (naming may vary)
+   */
+  const loadAntigravitySubscriptionTier = async (
+    authIndex: string
+  ): Promise<AntigravitySubscriptionTier | null> => {
+    const requestBody = JSON.stringify({
+      metadata: {
+        ideType: 'ANTIGRAVITY',
+        platform: 'PLATFORM_UNSPECIFIED',
+        pluginType: 'GEMINI'
+      }
+    })
+
+    for (const url of ANTIGRAVITY_LOAD_CODE_ASSIST_URLS) {
+      try {
+        const res = await apiCallApi.request({
+          authIndex,
+          method: 'POST',
+          url,
+          header: { ...ANTIGRAVITY_REQUEST_HEADERS },
+          data: requestBody
+        })
+
+        const status = resolveApiCallStatusCode(res)
+        if (status < 200 || status >= 300) {
+          continue
+        }
+
+        const payload = parseAntigravityPayload((res as any).body ?? (res as any).bodyText)
+        const tier = resolveAntigravitySubscriptionTierFromLoadCodeAssist(payload)
+        if (tier) return tier
+      } catch {
+        // Ignore and try next URL
+      }
+    }
+
+    return null
+  }
+
+  /**
    * Antigravity: POST to multiple URLs with fallback
    * Response: { models: Record<string, AntigravityQuotaInfo> }
    * Supports multiple request body formats for compatibility
@@ -464,6 +530,15 @@ export function useQuota(file: AuthFileItem) {
   const loadAntigravityQuota = async (authIndex: string) => {
     const projectId = await resolveAntigravityProjectId(file)
     const requestBodies = [JSON.stringify({ projectId }), JSON.stringify({ project: projectId })]
+
+    // Best-effort: resolve subscription tier without failing quota refresh.
+    const tier = await loadAntigravitySubscriptionTier(authIndex)
+    if (tier) {
+      const currentState = quotaStore.getQuotaState(file.name)
+      if (currentState && 'groups' in currentState) {
+        quotaStore.setQuotaState(file.name, { ...currentState, subscriptionTier: tier })
+      }
+    }
 
     let lastError = ''
     let lastStatus: number | undefined
@@ -481,15 +556,16 @@ export function useQuota(file: AuthFileItem) {
             data: requestBodies[attempt]
           })
 
-          if (res.statusCode < 200 || res.statusCode >= 300) {
+          const statusCode = resolveApiCallStatusCode(res)
+          if (statusCode < 200 || statusCode >= 300) {
             lastError = getApiCallErrorMessage(res)
-            lastStatus = res.statusCode
-            if (res.statusCode === 403 || res.statusCode === 404) {
-              priorityStatus ??= res.statusCode
+            lastStatus = statusCode
+            if (statusCode === 403 || statusCode === 404) {
+              priorityStatus ??= statusCode
             }
             // If 400 error with unknown field, try next request body format
             if (
-              res.statusCode === 400 &&
+              statusCode === 400 &&
               isAntigravityUnknownFieldError(lastError) &&
               attempt < requestBodies.length - 1
             ) {
@@ -499,7 +575,7 @@ export function useQuota(file: AuthFileItem) {
           }
 
           hadSuccess = true
-          const payload = parseAntigravityPayload(res.body ?? res.bodyText)
+          const payload = parseAntigravityPayload((res as any).body ?? (res as any).bodyText)
           const models = payload?.models
 
           // models should be an object map, not an array

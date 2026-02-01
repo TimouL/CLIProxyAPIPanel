@@ -7,6 +7,8 @@ export type ThemeColors = { bg: string; text: string; border?: string };
 export type TypeColorSet = { light: ThemeColors; dark?: ThemeColors };
 export type ResolvedTheme = 'light' | 'dark';
 
+export type AntigravitySubscriptionTier = 'free' | 'pro' | 'ultra';
+
 // API payload types
 export interface GeminiCliQuotaBucket {
   modelId?: string;
@@ -103,11 +105,13 @@ export interface AntigravityQuotaGroup {
   models: string[];
   remainingFraction: number;
   resetTime?: string;
+  resetCountdown?: string;
 }
 
 export interface AntigravityQuotaState {
   status: 'idle' | 'loading' | 'success' | 'error';
   groups: AntigravityQuotaGroup[];
+  subscriptionTier?: AntigravitySubscriptionTier | null;
   error?: string;
   errorStatus?: number;
 }
@@ -160,4 +164,3 @@ export interface ApiCallResponse {
   bodyText?: string
   error?: string
 }
-

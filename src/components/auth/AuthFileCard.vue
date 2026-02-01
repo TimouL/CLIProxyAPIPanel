@@ -31,6 +31,14 @@
               {{ file.name }}
             </h3>
             <span
+              v-if="antigravityPlanLabel"
+              class="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
+              :class="antigravityPlanBadgeClass"
+              title="Antigravity 套餐类型"
+            >
+              套餐: {{ antigravityPlanLabel }}
+            </span>
+            <span
               v-if="codexPlanLabel"
               class="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
               :class="codexPlanBadgeClass"
@@ -166,20 +174,27 @@
       <!-- Antigravity Quota -->
       <div v-else-if="file.type === 'antigravity' && quotaState?.status === 'success'" class="space-y-3">
         <div v-for="group in antigravityGroups" :key="group.id">
-           <div class="flex justify-between text-xs mb-1">
-             <span class="text-foreground/80">{{ group.label }}</span>
-             <div class="flex items-center gap-2">
-               <span class="font-mono">{{ (group.remainingFraction * 100).toFixed(0) }}%</span>
-               <span v-if="group.resetTime" class="text-[10px] text-muted-foreground">{{ formatQuotaResetTime(group.resetTime) }}</span>
-             </div>
-           </div>
-           <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-             <div 
-               class="h-full transition-all duration-500 rounded-full"
-               :class="getProgressColor(group.remainingFraction)"
-               :style="{ width: `${group.remainingFraction * 100}%` }"
-             ></div>
-           </div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-foreground/80">{{ group.label }}</span>
+            <div class="flex items-center gap-2">
+              <span class="font-mono">{{ (group.remainingFraction * 100).toFixed(0) }}%</span>
+              <span
+                v-if="group.resetCountdown"
+                class="flex items-center gap-1 text-[10px] text-muted-foreground"
+                title="距离下次重置"
+              >
+                <Clock class="h-3 w-3" />
+                <span class="font-mono">{{ group.resetCountdown }}</span>
+              </span>
+            </div>
+          </div>
+          <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              class="h-full transition-all duration-500 rounded-full"
+              :class="getProgressColor(group.remainingFraction)"
+              :style="{ width: `${group.remainingFraction * 100}%` }"
+            ></div>
+          </div>
         </div>
         <div v-if="antigravityGroups.length === 0" class="text-xs text-muted-foreground text-center py-2">
           暂无配额信息
@@ -244,24 +259,25 @@
 
 <script setup lang="ts">
 import { computed, inject, watch, onMounted, type Ref } from 'vue'
-import { 
-  FileJson, 
-  Download, 
-  Trash2, 
-  RefreshCw, 
-  Code, 
-  Cpu, 
-  Box, 
+import {
+  FileJson,
+  Download,
+  Trash2,
+  RefreshCw,
+  Clock,
+  Code,
+  Cpu,
+  Box,
   Zap,
   Bot,
   Info,
   Pencil
 } from 'lucide-vue-next'
-  import Button from '@/components/ui/button.vue'
-  import Switch from '@/components/ui/switch.vue'
-  import ProxyEgressIcon from '@/components/common/ProxyEgressIcon.vue'
-  import ProviderLogo from '@/components/common/ProviderLogo.vue'
-  import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
+import Button from '@/components/ui/button.vue'
+import Switch from '@/components/ui/switch.vue'
+import ProxyEgressIcon from '@/components/common/ProxyEgressIcon.vue'
+import ProviderLogo from '@/components/common/ProviderLogo.vue'
+import type { AuthFileItem, AntigravityQuotaState, CodexQuotaState, GeminiCliQuotaState } from '@/types'
 import { TYPE_COLORS, formatQuotaResetTime, resolveCodexPlanType } from '@/utils/quota'
 import { useQuota } from '@/composables/useQuota'
 import { useAuthStatsStore } from '@/stores/authStats'
@@ -329,6 +345,35 @@ const codexPlanBadgeClass = computed(() => {
   if (!plan) return ''
   if (plan === 'free') return 'bg-muted text-muted-foreground'
   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+})
+
+const antigravityPlanType = computed(() => {
+  const provider = (props.file.type || '').toString().toLowerCase()
+  if (provider !== 'antigravity') return null
+
+  const fromQuota = (quotaState.value as Partial<AntigravityQuotaState> | null | undefined)
+    ?.subscriptionTier
+  if (typeof fromQuota !== 'string') return null
+  const trimmed = fromQuota.trim().toLowerCase()
+  return trimmed || null
+})
+
+const antigravityPlanLabel = computed(() => {
+  const plan = antigravityPlanType.value
+  if (!plan) return null
+  if (plan === 'free') return 'Free'
+  if (plan === 'pro') return 'Pro'
+  if (plan === 'ultra') return 'Ultra'
+  return plan
+})
+
+const antigravityPlanBadgeClass = computed(() => {
+  const plan = antigravityPlanType.value
+  if (!plan) return ''
+  if (plan === 'free') return 'bg-muted text-muted-foreground'
+  if (plan === 'pro') return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
+  if (plan === 'ultra') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+  return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
 })
 
 const hasProviderLogo = computed(() => {

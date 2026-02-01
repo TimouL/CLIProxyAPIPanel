@@ -68,7 +68,7 @@ export const useQuotaStore = defineStore('quota', () => {
 
     let initialState: QuotaState
     if (fileType === 'antigravity') {
-      initialState = { status: 'idle', groups: [] }
+      initialState = { status: 'idle', groups: [], subscriptionTier: null }
     } else if (fileType === 'codex') {
       initialState = { status: 'idle', windows: [] }
     } else if (fileType === 'gemini-cli') {

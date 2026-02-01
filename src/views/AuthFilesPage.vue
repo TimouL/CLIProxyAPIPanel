@@ -322,7 +322,7 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import { formatUnixTimestamp, formatDateOnly } from '@/utils/format'
-import { sortAuthFilesEnabledFirst } from '@/utils/authFiles'
+import { sortAuthFilesEnabledFirst, sortAuthFilesEnabledFirstThenByTier } from '@/utils/authFiles'
 
 const { toast } = useToast()
 const { copy } = useClipboard()
@@ -414,9 +414,14 @@ const availableTypes = computed(() => {
 })
 
 // Group files by type
-const antigravityFiles = computed(() => 
-  sortAuthFilesEnabledFirst(files.value.filter(f => f.type === 'antigravity'))
-)
+const antigravityFiles = computed(() => {
+  const list = files.value.filter((f) => f.type === 'antigravity')
+  return sortAuthFilesEnabledFirstThenByTier(list, (file) => {
+    const state = quotaStore.getQuotaState(file.name) as any
+    const tier = state?.subscriptionTier
+    return typeof tier === 'string' ? tier : null
+  })
+})
 
 const codexFiles = computed(() => 
   sortAuthFilesEnabledFirst(files.value.filter(f => f.type === 'codex'))
